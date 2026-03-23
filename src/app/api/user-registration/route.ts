@@ -68,7 +68,6 @@ export async function POST(req: Request) {
       emailRedirectTo,
       data: {
         full_name: fullName,
-        role: "user",
         locale
       }
     }
