@@ -24,13 +24,11 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
   const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const swipeRef = useRef<{
-    pointerId: number;
     startX: number;
     startY: number;
     lastX: number;
     lastY: number;
     isDown: boolean;
-    hasSwiped: boolean;
   } | null>(null);
   const suppressClickRef = useRef(false);
 
@@ -117,41 +115,9 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
     setActiveImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   }, [images.length]);
 
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (images.length <= 1) return;
-    if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
-    swipeRef.current = {
-      pointerId: e.pointerId,
-      startX: e.clientX,
-      startY: e.clientY,
-      lastX: e.clientX,
-      lastY: e.clientY,
-      isDown: true,
-      hasSwiped: false,
-    };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+  const finishSwipe = () => {
     const state = swipeRef.current;
-    if (!state || !state.isDown || state.pointerId !== e.pointerId) return;
-    state.lastX = e.clientX;
-    state.lastY = e.clientY;
-
-    const dx = state.lastX - state.startX;
-    const dy = state.lastY - state.startY;
-    const absX = Math.abs(dx);
-    const absY = Math.abs(dy);
-
-    if (absX > 12 && absX > absY * 1.1) {
-      state.hasSwiped = true;
-      e.preventDefault();
-    }
-  };
-
-  const finishSwipe = (pointerId: number) => {
-    const state = swipeRef.current;
-    if (!state || !state.isDown || state.pointerId !== pointerId) return;
+    if (!state || !state.isDown) return;
 
     const dx = state.lastX - state.startX;
     const dy = state.lastY - state.startY;
@@ -170,13 +136,34 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
     else goPrev();
   };
 
-  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    finishSwipe(e.pointerId);
+  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (images.length <= 1) return;
+    const t = e.touches[0];
+    if (!t) return;
+    swipeRef.current = {
+      startX: t.clientX,
+      startY: t.clientY,
+      lastX: t.clientX,
+      lastY: t.clientY,
+      isDown: true,
+    };
   };
 
-  const onPointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+  const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     const state = swipeRef.current;
-    if (state && state.pointerId === e.pointerId) swipeRef.current = null;
+    if (!state || !state.isDown) return;
+    const t = e.touches[0];
+    if (!t) return;
+    state.lastX = t.clientX;
+    state.lastY = t.clientY;
+  };
+
+  const onTouchEnd = () => {
+    finishSwipe();
+  };
+
+  const onTouchCancel = () => {
+    swipeRef.current = null;
   };
 
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-emerald-500">Načítavam profil...</div>;
@@ -188,10 +175,11 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
       {images.length > 0 ? (
         <div
           className="relative w-full aspect-[10/11] overflow-hidden group touch-pan-y"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerCancel}
+          style={{ touchAction: "pan-y" }}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchCancel}
         >
           <Image src="/simplelogo.png" alt="" width={60} height={60} className="absolute left-4 top-4 z-40" />
           {images.map((img, idx) => (
