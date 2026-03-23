@@ -171,7 +171,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
 
   return (
     <div className="min-h-screen bg-zinc-900 md:px-10 md:py-10">
-      <div className="min-h-screen w-full max-w-md mx-auto bg-black text-white pb-20 overflow-x-hidden relative md:rounded-2xl md:shadow-2xl md:shadow-black/40">
+      <div className="min-h-screen w-full max-w-md md:max-w-lg mx-auto bg-black text-white pb-20 overflow-x-hidden relative md:rounded-2xl md:shadow-2xl md:shadow-black/40">
       {/* 1. BANNER / SLIDER - Zobrazí sa len ak sú fotky */}
       {images.length > 0 ? (
         <div
