@@ -187,13 +187,13 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
       {/* 1. BANNER / SLIDER - Zobrazí sa len ak sú fotky */}
       {images.length > 0 ? (
         <div
-          className="relative w-full aspect-[4/5] overflow-hidden group touch-pan-y"
+          className="relative w-full aspect-[10/11] overflow-hidden group touch-pan-y"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
         >
-          <Image src="/simplelogo.png" alt="" width={20} height={20} className="absolute left-4 top-4 z-40" />
+          <Image src="/simplelogo.png" alt="" width={60} height={60} className="absolute left-4 top-4 z-40" />
           {images.map((img, idx) => (
             <div 
               key={idx}
@@ -240,8 +240,8 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           )}
         </div>
       ) : (
-        <div className="relative w-full aspect-[4/5] bg-zinc-900 flex items-center justify-center text-zinc-700 italic">
-          <Image src="/simplelogo.png" alt="" width={20} height={20} className="absolute left-4 top-4 z-40" />
+        <div className="relative w-full aspect-[10/11] bg-zinc-900 flex items-center justify-center text-zinc-700 italic">
+          <Image src="/simplelogo.png" alt="" width={60} height={60} className="absolute left-4 top-4 z-40" />
           Žiadne profilové fotky
         </div>
       )}
