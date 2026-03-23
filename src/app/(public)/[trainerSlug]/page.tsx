@@ -25,13 +25,6 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
   const [trainer, setTrainer] = useState<TrainerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  
-  // Ak sú polia prázdne, v UI ich skryjeme
-  const images: string[] = trainer.images && Array.isArray(trainer.images) 
-    ? trainer.images.filter((img): img is string => img !== null)
-    : [];
-  const reviews: any[] = [];   // Tu budú recenzie z DB (zatiaľ prázdne pre test skrytia)
-  const results: string[] = []; // Tu budú výsledky z DB (zatiaľ prázdne pre test skrytia)
 
   const loadTrainer = useCallback(async () => {
     setLoading(true);
@@ -57,6 +50,13 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
 
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-emerald-500">Načítavam profil...</div>;
   if (!trainer) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Profil sa nenašiel.</div>;
+
+  // Ak sú polia prázdne, v UI ich skryjeme
+  const images: string[] = trainer.images && Array.isArray(trainer.images) 
+    ? trainer.images.filter((img): img is string => img !== null)
+    : [];
+  const reviews: any[] = [];   // Tu budú recenzie z DB (zatiaľ prázdne pre test skrytia)
+  const results: string[] = []; // Tu budú výsledky z DB (zatiaľ prázdne pre test skrytia)
 
   return (
     <div className="min-h-screen bg-black text-white pb-20 max-w-md mx-auto">
