@@ -13,6 +13,7 @@ type TrainerProfile = {
   bio: string | null;
   headline: string | null;
   city: string | null;
+  images: any[] | null;
   brands: any[] | null;
   profile_id: string;
   profiles: {
@@ -25,9 +26,10 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
   const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   
-  // V reálnom nasadení budú tieto dáta prichádzať z DB
   // Ak sú polia prázdne, v UI ich skryjeme
-  const images: string[] = []; // Tu budú fotky z DB (zatiaľ prázdne pre test skrytia)
+  const images: string[] = trainer.images && Array.isArray(trainer.images) 
+    ? trainer.images.filter((img): img is string => img !== null)
+    : [];
   const reviews: any[] = [];   // Tu budú recenzie z DB (zatiaľ prázdne pre test skrytia)
   const results: string[] = []; // Tu budú výsledky z DB (zatiaľ prázdne pre test skrytia)
 
