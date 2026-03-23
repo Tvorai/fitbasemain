@@ -249,7 +249,7 @@ export default function TrainerDashboardPage() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col md:flex-row">
       {/* Sidebar */}
-      <aside className="w-full md:w-[280px] p-6 md:p-10 flex flex-col gap-10 shrink-0">
+      <aside className="w-full md:w-[280px] p-6 md:p-10 flex flex-col gap-16 shrink-0">
         <div className="mb-4">
           <Image
             src="/Fitbase logo.png"
