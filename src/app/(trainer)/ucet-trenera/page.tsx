@@ -34,6 +34,8 @@ export default function TrainerDashboardPage() {
   
   // State pre "Môj profil"
   const [username, setUsername] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [city, setCity] = useState("");
   const [bio, setBio] = useState("");
   const [images, setImages] = useState<(string | null)[]>([null, null, null, null]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,7 +59,7 @@ export default function TrainerDashboardPage() {
 
       const { data: trainer, error } = await supabase
         .from("trainers")
-        .select("*")
+        .select("*, profiles(full_name)")
         .eq("profile_id", user.id)
         .maybeSingle();
 
@@ -65,8 +67,9 @@ export default function TrainerDashboardPage() {
 
       if (trainer) {
         setUsername(trainer.slug || "");
+        setFullName((trainer as any).profiles?.full_name || "");
+        setCity(trainer.city || "");
         setBio(trainer.bio || "");
-        // Načítanie značiek (ak existujú v JSONB stĺpci, inak [] )
         setBrands(trainer.brands || []);
       }
     } catch (err) {
@@ -88,17 +91,32 @@ export default function TrainerDashboardPage() {
       if (!user) return;
 
       const slug = toSlug(username);
-      const { error } = await supabase
+      
+      // 1. Update tabuľky profiles (meno)
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ full_name: fullName })
+        .eq("id", user.id);
+      
+      if (profileError) throw profileError;
+
+      // 2. Update tabuľky trainers (slug, bio, mesto)
+      const { error: trainerError } = await supabase
         .from("trainers")
-        .update({ slug, bio })
+        .update({ 
+          slug, 
+          bio,
+          city: city 
+        })
         .eq("profile_id", user.id);
 
-      if (error) throw error;
+      if (trainerError) throw trainerError;
+      
       setUsername(slug);
-      alert("Profil bol uložený.");
+      alert("Profil bol úspešne uložený.");
     } catch (err) {
       console.error(err);
-      alert("Chyba pri ukladaní.");
+      alert("Chyba pri ukladaní profilu.");
     } finally {
       setSaving(false);
     }
@@ -219,8 +237,35 @@ export default function TrainerDashboardPage() {
               </span>
               <button onClick={() => navigator.clipboard.writeText(profileUrl)} className="bg-black text-white text-[10px] px-3 py-1 rounded-full shrink-0">Kopírovať</button>
             </div>
+            {/* Form sekcia */}
             <div className="space-y-4">
-              <input type="text" placeholder="Používateľské meno" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-transparent border border-emerald-500 rounded-full px-6 py-3 text-white outline-none" />
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  placeholder="Vaše meno a priezvisko"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full bg-transparent border border-emerald-500 rounded-full px-6 py-3 text-white outline-none focus:ring-1 focus:ring-emerald-500 transition-all"
+                />
+              </div>
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  placeholder="Lokalita (napr. Bratislava)"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="w-full bg-transparent border border-emerald-500 rounded-full px-6 py-3 text-white outline-none focus:ring-1 focus:ring-emerald-500 transition-all"
+                />
+              </div>
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  placeholder="Používateľské meno (URL slug)"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full bg-transparent border border-emerald-500 rounded-full px-6 py-3 text-white outline-none focus:ring-1 focus:ring-emerald-500 transition-all"
+                />
+              </div>
               <textarea placeholder="Bio" value={bio} onChange={(e) => setBio(e.target.value.slice(0, 100))} maxLength={100} className="w-full bg-transparent border border-emerald-500 rounded-3xl px-6 py-3 text-white outline-none min-h-[80px] resize-none" />
             </div>
             <div onClick={() => fileInputRef.current?.click()} className="w-full aspect-[16/9] border border-emerald-500 rounded-[40px] flex flex-col items-center justify-center cursor-pointer">
