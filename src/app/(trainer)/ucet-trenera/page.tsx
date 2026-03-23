@@ -41,6 +41,7 @@ export default function TrainerDashboardPage() {
   const [activeTab, setActiveTab] = useState<TabId>("profil");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const servicesPersistLockRef = useRef(false);
   
   // State pre "Môj profil"
   const [username, setUsername] = useState("");
@@ -320,14 +321,19 @@ export default function TrainerDashboardPage() {
   };
 
   const toggleService = async (key: ServiceKey) => {
-    const prev = servicesVisibility;
-    const next = { ...servicesVisibility, [key]: !servicesVisibility[key] };
-    setServicesVisibility(next);
-    try {
-      await persistServicesVisibility(next);
-    } catch {
-      setServicesVisibility(prev);
-    }
+    if (servicesPersistLockRef.current) return;
+    setServicesVisibility((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      servicesPersistLockRef.current = true;
+      persistServicesVisibility(next)
+        .catch(() => {
+          setServicesVisibility(prev);
+        })
+        .finally(() => {
+          servicesPersistLockRef.current = false;
+        });
+      return next;
+    });
   };
 
   const renderTabContent = () => {
