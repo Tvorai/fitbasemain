@@ -143,7 +143,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
                   ))}
                 </div>
               </div>
-              <p className="text-zinc-300 italic text-sm leading-relaxed">"{mockReviews[0].text}"</p>
+              <p className="text-zinc-300 italic text-sm leading-relaxed">&quot;{mockReviews[0].text}&quot;</p>
             </div>
             {/* Šípky */}
             <button className="absolute left-[-20px] top-1/2 -translate-y-1/2 text-emerald-500 text-2xl font-light hover:scale-110 transition-transform">&lt;</button>
