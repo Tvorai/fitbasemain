@@ -1,35 +1,108 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { useI18n } from "@/providers/i18n";
+import { createClient } from "@supabase/supabase-js";
+import { supabaseUrl, supabaseAnonKey } from "@/lib/config";
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 type TabId = "profil" | "rezervacie" | "sluzby" | "kalendar" | "recenzie" | "vysledky" | "znacky" | "nastavenia";
 
+// Helper pre slugifikáciu
+function toSlug(input: string) {
+  return input
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .replace(/-{2,}/g, "-");
+}
+
 export default function TrainerDashboardPage() {
-  const { messages } = useI18n();
   const [activeTab, setActiveTab] = useState<TabId>("profil");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   
   // State pre "Môj profil"
-  const [username, setUsername] = useState("trener-marko");
+  const [trainerId, setTrainerId] = useState<string | null>(null);
+  const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [images, setImages] = useState<(string | null)[]>([null, null, null, null]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const siteUrl = "https://fitbasemain.vercel.app/";
-  const profileUrl = `${siteUrl}${username}`;
+  const profileUrl = `${siteUrl}${toSlug(username)}`;
 
-  const tabs: { id: TabId; label: string }[] = [
-    { id: "profil", label: "Môj profil" },
-    { id: "rezervacie", label: "Rezervácie" },
-    { id: "sluzby", label: "Služby" },
-    { id: "kalendar", label: "Kalendár" },
-    { id: "recenzie", label: "Recenzie" },
-    { id: "vysledky", label: "Výsledky klientov" },
-    { id: "znacky", label: "Moje značky" },
-    { id: "nastavenia", label: "Nadstavenia" },
-  ];
+  // Načítanie dát zo Supabase
+  const loadProfile = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: trainer, error } = await supabase
+        .from("trainers")
+        .select("*")
+        .eq("profile_id", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (trainer) {
+        setTrainerId(trainer.id);
+        setUsername(trainer.slug || "");
+        setBio(trainer.bio || "");
+        // Tu by sa v budúcnosti načítavali fotky zo Storage/JSON stĺpca
+      }
+    } catch (err) {
+      console.error("Error loading profile:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  // Uloženie dát do Supabase
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert("Nie ste prihlásený.");
+        return;
+      }
+
+      const slug = toSlug(username);
+      if (!slug) {
+        alert("Prosím zadajte platné používateľské meno.");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("trainers")
+        .update({
+          slug: slug,
+          bio: bio,
+          // images by sa ukladali samostatne alebo do JSONB
+        })
+        .eq("profile_id", user.id);
+
+      if (error) throw error;
+      
+      setUsername(slug); // Aktualizujeme UI na vyčistený slug
+      alert("Profil bol úspešne uložený.");
+    } catch (err) {
+      console.error("Error saving profile:", err);
+      alert("Nepodarilo sa uložiť profil.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleImageUpload = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,6 +124,8 @@ export default function TrainerDashboardPage() {
   };
 
   const renderTabContent = () => {
+    if (loading) return <div className="flex items-center justify-center h-full text-zinc-500">Načítavam dáta...</div>;
+
     switch (activeTab) {
       case "profil":
         return (
@@ -141,8 +216,12 @@ export default function TrainerDashboardPage() {
 
             {/* Uložiť tlačidlo */}
             <div className="mt-4 self-end">
-              <button className="bg-emerald-500 hover:bg-emerald-400 text-black font-display text-xl px-10 py-2 rounded-full tracking-wider transition-colors uppercase">
-                Uložiť
+              <button 
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-emerald-500 hover:bg-emerald-400 text-black font-display text-xl px-10 py-2 rounded-full tracking-wider transition-colors uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? "Ukladám..." : "Uložiť"}
               </button>
             </div>
           </div>
@@ -150,11 +229,22 @@ export default function TrainerDashboardPage() {
       default:
         return (
           <div className="flex items-center justify-center h-full text-zinc-500 italic">
-            Obsah pre {tabs.find(t => t.id === activeTab)?.label} sa pripravuje...
+            Obsah sa pripravuje...
           </div>
         );
     }
   };
+
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "profil", label: "Môj profil" },
+    { id: "rezervacie", label: "Rezervácie" },
+    { id: "sluzby", label: "Služby" },
+    { id: "kalendar", label: "Kalendár" },
+    { id: "recenzie", label: "Recenzie" },
+    { id: "vysledky", label: "Výsledky klientov" },
+    { id: "znacky", label: "Moje značky" },
+    { id: "nastavenia", label: "Nadstavenia" },
+  ];
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col md:flex-row">
