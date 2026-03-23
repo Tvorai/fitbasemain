@@ -2,20 +2,14 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { createClient } from "@supabase/supabase-js";
-import { supabaseUrl, supabaseAnonKey } from "@/lib/config";
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 type TrainerProfile = {
-  id: string;
   slug: string;
   bio: string | null;
   headline: string | null;
   city: string | null;
   images: any[] | null;
   brands: any[] | null;
-  profile_id: string;
   profiles: {
     full_name: string | null;
   } | null;
@@ -29,14 +23,15 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
   const loadTrainer = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("trainers")
-        .select("*, profiles(full_name)")
-        .eq("slug", params.trainerSlug)
-        .maybeSingle();
-
-      if (error) throw error;
-      setTrainer(data);
+      const res = await fetch(`/api/public-trainer/${params.trainerSlug}`, {
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) {
+        setTrainer(null);
+        return;
+      }
+      setTrainer(json.trainer);
     } catch (err) {
       console.error("Error loading trainer profile:", err);
     } finally {
