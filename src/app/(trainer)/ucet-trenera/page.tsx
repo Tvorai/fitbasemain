@@ -278,7 +278,9 @@ export default function TrainerDashboardPage() {
 
       {/* Main Content */}
       <main className="flex-1 p-6 md:p-10 flex flex-col">
-        {renderTabContent()}
+        <div className="md:mt-[4px]">
+          {renderTabContent()}
+        </div>
       </main>
 
       <style jsx global>{`
