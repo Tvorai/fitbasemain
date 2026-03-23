@@ -12,7 +12,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pathname === "/registr%C3%A1cia-tr%C3%A9nera" ||
     pathname === "/prihlásenie-trénera" ||
     pathname === "/prihlasenie-trenera" ||
-    pathname === "/prihl%C3%A1senie-tr%C3%A9nera";
+    pathname === "/prihl%C3%A1senie-tr%C3%A9nera" ||
+    pathname === "/ucet-trenera";
 
   if (hideChrome) {
     return <main>{children}</main>;
