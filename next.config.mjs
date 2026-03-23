@@ -9,6 +9,14 @@ const config = {
       {
         source: "/registr%C3%A1cia-tr%C3%A9nera",
         destination: "/registracia-trenera"
+      },
+      {
+        source: "/prihlásenie-trénera",
+        destination: "/prihlasenie-trenera"
+      },
+      {
+        source: "/prihl%C3%A1senie-tr%C3%A9nera",
+        destination: "/prihlasenie-trenera"
       }
     ];
   },

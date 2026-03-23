@@ -1,11 +1,22 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useI18n } from "@/providers/i18n";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+import { featureFlags, supabaseAnonKey, supabaseUrl } from "@/lib/config";
 
-export default function TrainerRegistrationPage() {
-  const { messages } = useI18n();
+const supabase = featureFlags.supabaseEnabled
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
+
+export default function TrainerLoginPage() {
+  const router = useRouter();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -24,90 +35,83 @@ export default function TrainerRegistrationPage() {
         <div className="grid gap-10 md:grid-cols-[minmax(380px,520px)_1fr] md:items-center md:gap-16">
           <div className="max-w-xl md:max-w-none">
             <h1 className="font-display text-5xl leading-[0.9] tracking-wide md:text-6xl">
-              {messages.pages.trainerRegistration.title.toUpperCase()}
+              PRIHLÁSENIE TRÉNERA
             </h1>
             <p className="mt-3 text-sm italic text-white/70 md:text-base">
-              {messages.pages.trainerRegistration.subtitle}
+              Posuňte svoju profesiu na nový level
             </p>
 
             <form
               className="mt-7 space-y-3 md:mt-8"
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
+                if (loading) return;
+
+                setShowForgotPassword(false);
+
+                if (!supabase) return;
+                if (!email.trim() || !password) return;
+
+                setLoading(true);
+                const { error } = await supabase.auth.signInWithPassword({
+                  email: email.trim(),
+                  password
+                });
+                setLoading(false);
+
+                if (error) {
+                  setShowForgotPassword(true);
+                  return;
+                }
+
+                router.push("/ucet-trenera");
               }}
             >
               <div>
-                <label className="sr-only" htmlFor="fullName">
-                  {messages.pages.trainerRegistration.fields.fullName}
-                </label>
-                <input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  placeholder={messages.pages.trainerRegistration.fields.fullName}
-                  className="h-12 w-full rounded-full border border-emerald-500/80 bg-transparent px-5 text-white placeholder-white/70 outline-none ring-emerald-400 focus:ring-2"
-                  autoComplete="name"
-                />
-              </div>
-
-              <div>
                 <label className="sr-only" htmlFor="email">
-                  {messages.pages.trainerRegistration.fields.email}
+                  Email
                 </label>
                 <input
                   id="email"
                   name="email"
                   type="email"
-                  placeholder={messages.pages.trainerRegistration.fields.email}
+                  placeholder="Email"
                   className="h-12 w-full rounded-full border border-emerald-500/80 bg-transparent px-5 text-white placeholder-white/70 outline-none ring-emerald-400 focus:ring-2"
                   autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
               <div>
                 <label className="sr-only" htmlFor="password">
-                  {messages.pages.trainerRegistration.fields.password}
+                  Heslo
                 </label>
                 <input
                   id="password"
                   name="password"
                   type="password"
-                  placeholder={messages.pages.trainerRegistration.fields.password}
+                  placeholder="Heslo"
                   className="h-12 w-full rounded-full border border-emerald-500/80 bg-transparent px-5 text-white placeholder-white/70 outline-none ring-emerald-400 focus:ring-2"
-                  autoComplete="new-password"
-                />
-              </div>
-
-              <div>
-                <label className="sr-only" htmlFor="passwordRepeat">
-                  {messages.pages.trainerRegistration.fields.passwordRepeat}
-                </label>
-                <input
-                  id="passwordRepeat"
-                  name="passwordRepeat"
-                  type="password"
-                  placeholder={messages.pages.trainerRegistration.fields.passwordRepeat}
-                  className="h-12 w-full rounded-full border border-emerald-500/80 bg-transparent px-5 text-white placeholder-white/70 outline-none ring-emerald-400 focus:ring-2"
-                  autoComplete="new-password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
               <button
                 type="submit"
-                className="font-display mt-4 h-12 w-full rounded-full bg-emerald-500 text-center text-2xl tracking-wide text-black hover:bg-emerald-400"
+                disabled={loading}
+                className="font-display mt-4 h-12 w-full rounded-full bg-emerald-500 text-center text-2xl tracking-wide text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {messages.pages.trainerRegistration.submit.toUpperCase()}
+                PRIHLÁSIŤ SA
               </button>
 
-              <div className="mt-3 text-center text-sm text-white/80">
-                <span>Máte účet? </span>
-                <Link
-                  href="/prihlasenie-trenera"
-                  className="font-semibold text-emerald-400 hover:text-emerald-300"
-                >
-                  Prihlásiť sa
-                </Link>
-              </div>
+              {showForgotPassword ? (
+                <div className="mt-3 text-center text-sm text-white/80">
+                  Zabudli ste heslo?
+                </div>
+              ) : null}
             </form>
           </div>
 

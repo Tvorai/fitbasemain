@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useI18n } from "@/providers/i18n";
 
 export default function TrainerRegistrationPage() {
@@ -97,6 +98,16 @@ export default function TrainerRegistrationPage() {
               >
                 {messages.pages.trainerRegistration.submit.toUpperCase()}
               </button>
+
+              <div className="mt-3 text-center text-sm text-white/80">
+                <span>Máte účet? </span>
+                <Link
+                  href="/prihlasenie-trenera"
+                  className="font-semibold text-emerald-400 hover:text-emerald-300"
+                >
+                  Prihlásiť sa
+                </Link>
+              </div>
             </form>
           </div>
 
