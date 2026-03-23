@@ -168,13 +168,14 @@ export default function TrainerDashboardPage() {
   };
 
   const removeImage = (index: number) => {
-    const newImages = [...images];
-    newImages[index] = null;
-    // Posunúť ostatné fotky dopredu, aby nezostali diery
-    const filtered = newImages.filter(img => img !== null);
-    while (filtered.length < 4) filtered.push(null);
-    setImages(filtered);
-  };
+     const newImages = [...images];
+     newImages[index] = null;
+     // Posunúť ostatné fotky dopredu, aby nezostali diery
+     const filtered = newImages.filter((img): img is string => img !== null);
+     const result: (string | null)[] = [...filtered];
+     while (result.length < 4) result.push(null);
+     setImages(result);
+   };
 
   const handleSaveBrand = async () => {
     if (!newBrandLogo || !newBrandCode.trim()) {
