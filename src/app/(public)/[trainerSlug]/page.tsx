@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 
 type TrainerProfile = {
@@ -19,6 +19,8 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
   const [trainer, setTrainer] = useState<TrainerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const swipeRef = useRef<{ startX: number; startY: number } | null>(null);
+  const suppressClickRef = useRef(false);
 
   const loadTrainer = useCallback(async () => {
     setLoading(true);
@@ -43,21 +45,76 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
     loadTrainer();
   }, [loadTrainer]);
 
-  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-emerald-500">Načítavam profil...</div>;
-  if (!trainer) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Profil sa nenašiel.</div>;
-
   // Ak sú polia prázdne, v UI ich skryjeme
-  const images: string[] = trainer.images && Array.isArray(trainer.images) 
+  const images: string[] = trainer?.images && Array.isArray(trainer.images)
     ? trainer.images.filter((img): img is string => img !== null)
     : [];
   const reviews: any[] = [];   // Tu budú recenzie z DB (zatiaľ prázdne pre test skrytia)
   const results: string[] = []; // Tu budú výsledky z DB (zatiaľ prázdne pre test skrytia)
 
+  useEffect(() => {
+    if (images.length === 0) {
+      if (activeImageIndex !== 0) setActiveImageIndex(0);
+      return;
+    }
+    if (activeImageIndex > images.length - 1) setActiveImageIndex(0);
+  }, [activeImageIndex, images.length]);
+
+  const goPrev = useCallback(() => {
+    if (suppressClickRef.current) return;
+    if (images.length <= 1) return;
+    setActiveImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  }, [images.length]);
+
+  const goNext = useCallback(() => {
+    if (suppressClickRef.current) return;
+    if (images.length <= 1) return;
+    setActiveImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  }, [images.length]);
+
+  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    swipeRef.current = { startX: t.clientX, startY: t.clientY };
+  };
+
+  const onTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!swipeRef.current) return;
+    if (images.length <= 1) {
+      swipeRef.current = null;
+      return;
+    }
+
+    const t = e.changedTouches[0];
+    const dx = t.clientX - swipeRef.current.startX;
+    const dy = t.clientY - swipeRef.current.startY;
+    swipeRef.current = null;
+
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    if (absX < 40 || absX <= absY) return;
+
+    suppressClickRef.current = true;
+    window.setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 250);
+
+    if (dx < 0) goNext();
+    else goPrev();
+  };
+
+  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-emerald-500">Načítavam profil...</div>;
+  if (!trainer) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Profil sa nenašiel.</div>;
+
   return (
     <div className="min-h-screen bg-black text-white pb-20 max-w-md mx-auto overflow-x-hidden relative">
       {/* 1. BANNER / SLIDER - Zobrazí sa len ak sú fotky */}
       {images.length > 0 ? (
-        <div className="relative w-full aspect-[3/4] overflow-hidden group touch-none">
+        <div
+          className="relative w-full aspect-[3/4] overflow-hidden group touch-pan-y"
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
           {images.map((img, idx) => (
             <div 
               key={idx}
@@ -78,11 +135,11 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
             <>
               <div 
                 className="absolute inset-y-0 left-0 w-1/2 z-20 cursor-pointer" 
-                onClick={() => setActiveImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
+                onClick={goPrev}
               />
               <div 
                 className="absolute inset-y-0 right-0 w-1/2 z-20 cursor-pointer" 
-                onClick={() => setActiveImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
+                onClick={goNext}
               />
             </>
           )}
