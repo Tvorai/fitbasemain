@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
+const noStoreHeaders = {
+  "Cache-Control": "no-store, max-age=0",
+  Pragma: "no-cache",
+  Expires: "0"
+};
 
 export async function GET(
   _request: Request,
@@ -13,7 +18,7 @@ export async function GET(
   if (!supabaseUrl || !serviceRoleKey) {
     return NextResponse.json(
       { ok: false, message: "Server nie je správne nakonfigurovaný." },
-      { status: 500 }
+      { status: 500, headers: noStoreHeaders }
     );
   }
 
@@ -43,16 +48,16 @@ export async function GET(
   if (error) {
     return NextResponse.json(
       { ok: false, message: error.message },
-      { status: 500 }
+      { status: 500, headers: noStoreHeaders }
     );
   }
 
   if (!data) {
     return NextResponse.json(
       { ok: false, message: "Profil sa nenašiel." },
-      { status: 404 }
+      { status: 404, headers: noStoreHeaders }
     );
   }
 
-  return NextResponse.json({ ok: true, trainer: data });
+  return NextResponse.json({ ok: true, trainer: data }, { headers: noStoreHeaders });
 }
