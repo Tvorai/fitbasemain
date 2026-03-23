@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 
+type ServiceKey = "personal_training" | "online_consultation" | "meal_plan" | "brands";
+type ServicesVisibility = Record<ServiceKey, boolean>;
+
 type TrainerProfile = {
   slug: string;
   bio: string | null;
@@ -10,7 +13,7 @@ type TrainerProfile = {
   city: string | null;
   images: any[] | null;
   brands: any[] | null;
-  services: Record<string, boolean> | null;
+  services: unknown;
   profiles: {
     full_name: string | null;
   } | null;
@@ -60,16 +63,39 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
     : [];
   const reviews: any[] = [];   // Tu budú recenzie z DB (zatiaľ prázdne pre test skrytia)
   const results: string[] = []; // Tu budú výsledky z DB (zatiaľ prázdne pre test skrytia)
-  const defaultServices = {
+  const defaultServices: ServicesVisibility = {
     personal_training: true,
     online_consultation: true,
     meal_plan: true,
     brands: true
   };
-  const services =
-    trainer?.services && typeof trainer.services === "object"
-      ? { ...defaultServices, ...trainer.services }
-      : defaultServices;
+
+  const coerceBoolean = (value: unknown): boolean | undefined => {
+    if (value === true || value === false) return value;
+    if (value === "true") return true;
+    if (value === "false") return false;
+    if (value === 1) return true;
+    if (value === 0) return false;
+    return undefined;
+  };
+
+  let servicesRaw: Record<string, unknown> | null = null;
+  if (trainer?.services && typeof trainer.services === "string") {
+    try {
+      const parsed = JSON.parse(trainer.services);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) servicesRaw = parsed as Record<string, unknown>;
+    } catch {}
+  } else if (trainer?.services && typeof trainer.services === "object" && !Array.isArray(trainer.services)) {
+    servicesRaw = trainer.services as Record<string, unknown>;
+  }
+
+  const servicesMerged = { ...defaultServices, ...(servicesRaw || {}) } as Record<string, unknown>;
+  const services: ServicesVisibility = {
+    personal_training: coerceBoolean(servicesMerged.personal_training) ?? defaultServices.personal_training,
+    online_consultation: coerceBoolean(servicesMerged.online_consultation) ?? defaultServices.online_consultation,
+    meal_plan: coerceBoolean(servicesMerged.meal_plan) ?? defaultServices.meal_plan,
+    brands: coerceBoolean(servicesMerged.brands) ?? defaultServices.brands
+  };
 
   useEffect(() => {
     if (images.length === 0) {
