@@ -6,14 +6,16 @@ export type Trainer = {
   location: string;
 };
 
-// Doplnený typ Slot
+// Doplnený typ Slot pre availability_slots tabuľku
 export type Slot = {
   id: string;
-  start_time: string; // ISO string pre začiatok slotu (napr. "2024-03-25T09:00:00Z")
-  end_time: string;   // ISO string pre koniec slotu (napr. "2024-03-25T10:00:00Z")
-  is_available: boolean; // Indikátor dostupnosti slotu
-  trainer_id: string; // ID trénera, ktorému slot patrí
-  // Ďalšie relevantné polia, ak existujú v DB tabuľke 'slots'
+  trainer_id: string;
+  day_of_week: number; // smallint v DB, TypeScript number
+  start_time: string; // time v DB, tu string (napr. "09:00:00")
+  end_time: string;   // time v DB, tu string (napr. "10:00:00")
+  is_active: boolean; // Indikátor aktivity slotu
+  created_at: string; // ISO string
+  updated_at: string; // ISO string
 };
 
 // Nové typy pre statusy rezervácie a platby (upravené podľa existujúcej DB schémy bookings)
