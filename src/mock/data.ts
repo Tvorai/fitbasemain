@@ -6,8 +6,36 @@ export const trainers: Trainer[] = [
 ];
 
 export const bookings: Booking[] = [
-  { id: "b1", trainerId: "t1", userId: "u1", date: "2026-03-25T10:00:00Z", status: "pending" },
-  { id: "b2", trainerId: "t2", userId: "u1", date: "2026-03-18T14:00:00Z", status: "confirmed" }
+  {
+    id: "b1",
+    trainer_id: "t1",
+    client_profile_id: "cp1",
+    service_id: "s1",
+    booking_status: "pending",
+    starts_at: "2026-03-25T10:00:00Z",
+    ends_at: "2026-03-25T11:00:00Z",
+    client_note: "Preferujem tichšie prostredie.",
+    trainer_note: null,
+    cancelled_by: null,
+    cancelled_reason: null,
+    created_at: "2026-03-20T08:00:00Z",
+    updated_at: "2026-03-20T08:00:00Z",
+  },
+  {
+    id: "b2",
+    trainer_id: "t2",
+    client_profile_id: "cp1",
+    service_id: "s2",
+    booking_status: "confirmed",
+    starts_at: "2026-03-18T14:00:00Z",
+    ends_at: "2026-03-18T15:00:00Z",
+    client_note: null,
+    trainer_note: "Potvrdené.",
+    cancelled_by: null,
+    cancelled_reason: null,
+    created_at: "2026-03-15T09:00:00Z",
+    updated_at: "2026-03-15T09:00:00Z",
+  },
 ];
 
 export const payments: Payment[] = [
