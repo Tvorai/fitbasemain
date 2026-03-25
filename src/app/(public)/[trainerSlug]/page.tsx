@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
+import Script from "next/script";
+import { Modal } from "@/components/Modal";
 
 type ServiceKey = "personal_training" | "online_consultation" | "meal_plan" | "brands";
 type ServicesVisibility = Record<ServiceKey, boolean>;
@@ -31,6 +33,17 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
     isDown: boolean;
   } | null>(null);
   const suppressClickRef = useRef(false);
+  const vantaElRef = useRef<HTMLDivElement | null>(null);
+  const vantaEffectRef = useRef<any>(null);
+  const [threeReady, setThreeReady] = useState(false);
+  const [p5Ready, setP5Ready] = useState(false);
+  const [vantaReady, setVantaReady] = useState(false);
+
+  // States for popups
+  const [isPersonalTrainingModalOpen, setIsPersonalTrainingModalOpen] = useState(false);
+  const [isOnlineConsultationModalOpen, setIsOnlineConsultationModalModalOpen] = useState(false);
+  const [isMealPlanModalOpen, setIsMealPlanModalOpen] = useState(false);
+  const [isBrandsModalOpen, setIsBrandsModalOpen] = useState(false);
 
   const loadTrainer = useCallback(async () => {
     setLoading(true);
@@ -166,12 +179,60 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
     swipeRef.current = null;
   };
 
+  useEffect(() => {
+    if (!threeReady || !vantaReady) return;
+    if (typeof window === "undefined") return;
+    if (window.innerWidth < 768) return;
+    if (!vantaElRef.current) return;
+    if (vantaEffectRef.current) return;
+
+    const VANTA = (window as any).VANTA;
+    if (!VANTA?.TOPOLOGY) return;
+
+    vantaEffectRef.current = VANTA.TOPOLOGY({
+      el: vantaElRef.current,
+      mouseControls: true,
+      touchControls: true,
+      gyroControls: false,
+      minHeight: 200.0,
+      minWidth: 200.0,
+      scale: 1.0,
+      scaleMobile: 1.0,
+      color: 0x97e6c0,
+      backgroundColor: 0x0
+    });
+
+    return () => {
+      vantaEffectRef.current?.destroy?.();
+      vantaEffectRef.current = null;
+    };
+  }, [p5Ready, threeReady, vantaReady]);
+
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-emerald-500">Načítavam profil...</div>;
   if (!trainer) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Profil sa nenašiel.</div>;
 
   return (
-    <div className="min-h-screen bg-[#0e0e0e] md:px-10 md:py-10">
-      <div className="min-h-screen w-full max-w-md md:max-w-xl mx-auto bg-black text-white pb-20 overflow-x-hidden relative md:rounded-2xl md:shadow-2xl md:shadow-black/40">
+    <div className="min-h-screen text-white">
+      <div ref={vantaElRef} className="fixed inset-0 bg-[#0e0e0e]" style={{ zIndex: 0 }} />
+
+      <Script
+        src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.min.js"
+        strategy="afterInteractive"
+        onLoad={() => setP5Ready(true)}
+      />
+      <Script
+        src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"
+        strategy="afterInteractive"
+        onLoad={() => setThreeReady(true)}
+      />
+      <Script
+        src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.topology.min.js"
+        strategy="afterInteractive"
+        onLoad={() => setVantaReady(true)}
+      />
+
+      <div className="relative z-10 min-h-screen md:px-10 md:py-10">
+        <div className="min-h-screen w-full max-w-md md:max-w-xl mx-auto bg-black text-white pb-20 overflow-x-hidden relative md:rounded-2xl md:shadow-2xl md:shadow-black/40">
       {/* 1. BANNER / SLIDER - Zobrazí sa len ak sú fotky */}
       {images.length > 0 ? (
         <div
@@ -262,22 +323,34 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
         {/* 4. SLUŽBY (TLAČIDLÁ) */}
         <div className="mt-8 space-y-3">
           {services.personal_training && (
-            <button className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-6 rounded-[20px] text-lg transition-colors shadow-lg shadow-emerald-500/10 uppercase tracking-wide">
+            <button
+              onClick={() => setIsPersonalTrainingModalOpen(true)}
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-6 rounded-[20px] text-lg transition-colors shadow-lg shadow-emerald-500/10 uppercase tracking-wide"
+            >
               Rezervovať osobný tréning
             </button>
           )}
           {services.online_consultation && (
-            <button className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-6 rounded-[20px] text-lg transition-colors shadow-lg shadow-emerald-500/10 uppercase tracking-wide">
+            <button
+              onClick={() => setIsOnlineConsultationModalModalOpen(true)}
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-6 rounded-[20px] text-lg transition-colors shadow-lg shadow-emerald-500/10 uppercase tracking-wide"
+            >
               Rezervovať online konzultáciu
             </button>
           )}
           {services.meal_plan && (
-            <button className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-6 rounded-[20px] text-lg transition-colors shadow-lg shadow-emerald-500/10 uppercase tracking-wide">
+            <button
+              onClick={() => setIsMealPlanModalOpen(true)}
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-6 rounded-[20px] text-lg transition-colors shadow-lg shadow-emerald-500/10 uppercase tracking-wide"
+            >
               Objednať jedálniček
             </button>
           )}
           {services.brands && trainer.brands && trainer.brands.length > 0 && (
-            <button className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-6 rounded-[20px] text-lg transition-colors shadow-lg shadow-emerald-500/10 uppercase tracking-wide">
+            <button
+              onClick={() => setIsBrandsModalOpen(true)}
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-6 rounded-[20px] text-lg transition-colors shadow-lg shadow-emerald-500/10 uppercase tracking-wide"
+            >
               Moje odporúčané značky
             </button>
           )}
@@ -328,7 +401,40 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
         @import url('https://fonts.googleapis.com/css2?family=League+Gothic&display=swap');
         .font-display { font-family: 'League Gothic', sans-serif; }
       `}</style>
+        </div>
       </div>
+      </div>
+      <Modal
+        isOpen={isPersonalTrainingModalOpen}
+        onClose={() => setIsPersonalTrainingModalOpen(false)}
+        title="Rezervovať osobný tréning"
+      >
+        <p>Tu bude obsah pre osobný tréning.</p>
+      </Modal>
+
+      <Modal
+        isOpen={isOnlineConsultationModalOpen}
+        onClose={() => setIsOnlineConsultationModalModalOpen(false)}
+        title="Rezervovať online konzultáciu"
+      >
+        <p>Tu bude obsah pre online konzultáciu.</p>
+      </Modal>
+
+      <Modal
+        isOpen={isMealPlanModalOpen}
+        onClose={() => setIsMealPlanModalOpen(false)}
+        title="Objednať jedálniček"
+      >
+        <p>Tu bude obsah pre jedálniček.</p>
+      </Modal>
+
+      <Modal
+        isOpen={isBrandsModalOpen}
+        onClose={() => setIsBrandsModalOpen(false)}
+        title="Moje odporúčané značky"
+      >
+        <p>Tu bude obsah pre odporúčané značky.</p>
+      </Modal>
     </div>
   );
 }
