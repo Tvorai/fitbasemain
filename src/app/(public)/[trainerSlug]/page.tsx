@@ -433,7 +433,28 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
         onClose={() => setIsBrandsModalOpen(false)}
         title="Moje odporúčané značky"
       >
-        <p>Tu bude obsah pre odporúčané značky.</p>
+        {trainer.brands && trainer.brands.length > 0 ? (
+          <div className="space-y-4">
+            {trainer.brands.map((brand: any, index: number) => (
+              <div key={index} className="flex items-center gap-4 p-3 border border-zinc-700 rounded-lg bg-zinc-800/50">
+                {brand.logo && (
+                  <Image src={brand.logo} alt={brand.name || "Brand logo"} width={64} height={64} className="rounded-md object-contain" />
+                )}
+                <div className="flex-grow">
+                  {brand.name && <h3 className="text-lg font-semibold">{brand.name}</h3>}
+                  {brand.code && (
+                    <div className="mt-1 text-sm text-zinc-300">
+                      Kód: <span className="font-mono bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded text-xs">{brand.code}</span>
+                    </div>
+                  )}
+                  {brand.description && <p className="text-zinc-400 text-xs mt-1">{brand.description}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-zinc-400 italic">Pre tohto trénera nie sú zatiaľ dostupné žiadne odporúčané značky.</p>
+        )}
       </Modal>
     </div>
   );
