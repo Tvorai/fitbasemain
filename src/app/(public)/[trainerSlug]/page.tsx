@@ -396,14 +396,14 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           </div>
         )}
       </div>
+          </div>
+      </div>
       
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=League+Gothic&display=swap');
         .font-display { font-family: 'League Gothic', sans-serif; }
       `}</style>
-        </div>
-      </div>
-      </div>
+
       <Modal
         isOpen={isPersonalTrainingModalOpen}
         onClose={() => setIsPersonalTrainingModalOpen(false)}
