@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Script from "next/script";
 import { Modal } from "@/components/Modal";
+import AvailableSlots from "@/components/booking/AvailableSlots";
 
 type ServiceKey = "personal_training" | "online_consultation" | "meal_plan" | "brands";
 type ServicesVisibility = Record<ServiceKey, boolean>;
@@ -399,17 +400,14 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           </div>
       </div>
       
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=League+Gothic&display=swap');
-        .font-display { font-family: 'League Gothic', sans-serif; }
-      `}</style>
+
 
       <Modal
         isOpen={isPersonalTrainingModalOpen}
         onClose={() => setIsPersonalTrainingModalOpen(false)}
         title="Rezervovať osobný tréning"
       >
-        <p>Tu bude obsah pre osobný tréning.</p>
+        <AvailableSlots trainerId={params.trainerSlug} />
       </Modal>
 
       <Modal
