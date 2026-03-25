@@ -6,8 +6,8 @@ export const trainers: Trainer[] = [
 ];
 
 export const bookings: Booking[] = [
-  { id: "b1", trainerId: "t1", userId: "u1", date: "2026-03-25T10:00:00Z", status: "planned" },
-  { id: "b2", trainerId: "t2", userId: "u1", date: "2026-03-18T14:00:00Z", status: "completed" }
+  { id: "b1", trainerId: "t1", userId: "u1", date: "2026-03-25T10:00:00Z", status: "pending" },
+  { id: "b2", trainerId: "t2", userId: "u1", date: "2026-03-18T14:00:00Z", status: "confirmed" }
 ];
 
 export const payments: Payment[] = [
