@@ -1,5 +1,6 @@
 
 import { createClient } from "@supabase/supabase-js";
+// Force Vercel redeploy
 import { Booking, BookingStatus, Slot } from "@/lib/types";
 
 /**
