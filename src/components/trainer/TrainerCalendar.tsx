@@ -49,16 +49,6 @@ export default function TrainerCalendar({ trainerId }: TrainerCalendarProps) {
     loadBookings();
   }, [trainerId]);
 
-  const NAME_TO_DAY_ID: Record<string, number> = {
-    monday: 1,
-    tuesday: 2,
-    wednesday: 3,
-    thursday: 4,
-    friday: 5,
-    saturday: 6,
-    sunday: 7,
-  };
-
   const getBookingForSlot = (dayId: number, hour: number) => {
     return bookings.find(b => {
       const date = new Date(b.starts_at);

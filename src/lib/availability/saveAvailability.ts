@@ -1,21 +1,9 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { DayName } from "@/lib/types";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-// Mapovanie ID dňa na DB enum day_name
-const DAY_ID_TO_NAME: Record<number, DayName> = {
-  1: "monday",
-  2: "tuesday",
-  3: "wednesday",
-  4: "thursday",
-  5: "friday",
-  6: "saturday",
-  7: "sunday",
-};
 
 /**
  * Server Action na uloženie dostupnosti trénera.
@@ -50,8 +38,6 @@ export async function saveAvailabilityAction(
       const dayData = availability[day];
       if (!dayData || !dayData.isDayActive || dayData.activeHours.length === 0) continue;
 
-      const dayName = DAY_ID_TO_NAME[day];
-
       // Zoradiť hodiny
       const sortedHours = [...dayData.activeHours].sort((a, b) => a - b);
       
@@ -66,7 +52,7 @@ export async function saveAvailabilityAction(
           // Úsek skončil, uložiť a začať nový
           newSlots.push({
             trainer_id: trainerId,
-            day_name: dayName,
+            day_of_week: day,
             start_time: `${currentStart.toString().padStart(2, '0')}:00:00`,
             end_time: `${currentEnd.toString().padStart(2, '0')}:00:00`,
             is_active: true
@@ -79,7 +65,7 @@ export async function saveAvailabilityAction(
       // Posledný úsek pre daný deň
       newSlots.push({
         trainer_id: trainerId,
-        day_name: dayName,
+        day_of_week: day,
         start_time: `${currentStart.toString().padStart(2, '0')}:00:00`,
         end_time: `${currentEnd.toString().padStart(2, '0')}:00:00`,
         is_active: true

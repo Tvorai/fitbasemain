@@ -13,24 +13,14 @@ interface CalendarSettingsProps {
 }
 
 const DAYS = [
-  { id: 1, label: "PO", name: "monday" as DayName },
-  { id: 2, label: "UT", name: "tuesday" as DayName },
-  { id: 3, label: "ST", name: "wednesday" as DayName },
-  { id: 4, label: "ŠT", name: "thursday" as DayName },
-  { id: 5, label: "PI", name: "friday" as DayName },
-  { id: 6, label: "SO", name: "saturday" as DayName },
-  { id: 7, label: "NE", name: "sunday" as DayName },
+  { id: 1, label: "PO" },
+  { id: 2, label: "UT" },
+  { id: 3, label: "ST" },
+  { id: 4, label: "ŠT" },
+  { id: 5, label: "PI" },
+  { id: 6, label: "SO" },
+  { id: 7, label: "NE" },
 ];
-
-const NAME_TO_DAY_ID: Record<string, number> = {
-  monday: 1,
-  tuesday: 2,
-  wednesday: 3,
-  thursday: 4,
-  friday: 5,
-  saturday: 6,
-  sunday: 7,
-};
 
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 5); // 05:00 - 21:00
 
@@ -54,7 +44,7 @@ export default function CalendarSettings({ trainerId }: CalendarSettingsProps) {
       try {
         const { data, error } = await supabase
           .from("availability_slots")
-          .select("day_name, start_time, end_time")
+          .select("day_of_week, start_time, end_time")
           .eq("trainer_id", trainerId)
           .eq("is_active", true);
 
@@ -67,7 +57,7 @@ export default function CalendarSettings({ trainerId }: CalendarSettingsProps) {
         });
 
         data?.forEach(slot => {
-          const dayId = NAME_TO_DAY_ID[slot.day_name as string];
+          const dayId = slot.day_of_week;
           if (!dayId) return;
 
           const startH = parseInt(slot.start_time.split(":")[0]);

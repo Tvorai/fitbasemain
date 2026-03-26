@@ -60,7 +60,7 @@ export async function getAvailableSlots(
   // 1. Načítanie aktívnych pravidiel dostupnosti pre trénera
   const { data: rawAvailabilityRules, error: rulesError } = await supabase
     .from("availability_slots")
-    .select("id, trainer_id, day_name, start_time, end_time, is_active")
+    .select("id, trainer_id, day_of_week, start_time, end_time, is_active")
     .eq("trainer_id", trainerId)
     .eq("is_active", true);
 
@@ -97,17 +97,6 @@ export async function getAvailableSlots(
     end: new Date(b.ends_at),
   }));
 
-  // Mapovanie JS dňa na DB enum day_name
-  const JS_DAY_TO_NAME: Record<number, string> = {
-    1: "monday",
-    2: "tuesday",
-    3: "wednesday",
-    4: "thursday",
-    5: "friday",
-    6: "saturday",
-    0: "sunday",
-  };
-
   // --- Generovanie a filtrovanie termínov ---
   console.log(`[getAvailableSlots] Generovanie termínov...`);
   const finalAvailableSlots: AvailableSlot[] = [];
@@ -120,9 +109,9 @@ export async function getAvailableSlots(
     day.setHours(0, 0, 0, 0); // Normalizácia na začiatok dňa
 
     const jsDayOfWeek = day.getDay(); // 0 = Nedeľa, 1 = Pondelok, ..., 6 = Sobota
-    const dayName = JS_DAY_TO_NAME[jsDayOfWeek];
+    const supabaseDayOfWeek = jsDayOfWeek === 0 ? 7 : jsDayOfWeek; // Konverzia na Supabase formát (1-7)
 
-    const rulesForThisDay = availabilityRules.filter(rule => rule.day_name === dayName);
+    const rulesForThisDay = availabilityRules.filter(rule => rule.day_of_week === supabaseDayOfWeek);
 
     // 4. Pre každé pravidlo generujeme 60-minútové termíny
     for (const rule of rulesForThisDay) {
