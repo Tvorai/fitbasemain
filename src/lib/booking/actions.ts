@@ -63,8 +63,8 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
     const { data: existingBookings, error: checkError } = await supabase
       .from("bookings")
       .select("id")
-      .eq("admin_id", admin_id)
-      .in("status", activeStatuses)
+      .eq("trainer_id", admin_id)
+      .in("booking_status", activeStatuses)
       .eq("starts_at", starts_at)
       .maybeSingle();
 
@@ -77,15 +77,14 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
     const { data: newBooking, error: insertError } = await supabase
       .from("bookings")
       .insert({
-        slot_id,
-        admin_id,
+        trainer_id: admin_id,
         starts_at,
         ends_at,
         client_name,
         client_email,
         client_phone,
-        note,
-        status: "pending" as BookingStatus, // Predvolený status
+        client_note: note,
+        booking_status: "pending" as BookingStatus, // Predvolený status
         payment_status: "unpaid" as PaymentStatus,
       })
       .select()

@@ -24,15 +24,17 @@ export type PaymentStatus = "unpaid" | "paid" | "failed" | "refunded";
 
 export type Booking = {
   id: string;
-  slot_id: string; // ID slotu (z availability_slots alebo manuálne vytvorený)
-  admin_id: string; // ID trénera/admina
-  client_name: string;
-  client_email: string;
-  client_phone: string | null;
-  note: string | null;
+  trainer_id: string; // ID trénera (podľa DB)
+  client_profile_id: string | null; // ID profilu klienta
+  service_id: string | null; // ID služby
+  booking_status: BookingStatus; // Status rezervácie (podľa DB)
   starts_at: string; // ISO string
   ends_at: string; // ISO string
-  status: BookingStatus;
+  client_name: string | null; // Pre guest booking (nutné pridať do DB)
+  client_email: string | null; // Pre guest booking (nutné pridať do DB)
+  client_phone: string | null; // Pre guest booking (nutné pridať do DB)
+  client_note: string | null; // Poznámka od klienta (podľa DB)
+  trainer_note: string | null; // Poznámka od trénera (podľa DB)
   payment_status: PaymentStatus;
   created_at: string; // ISO string
   updated_at: string; // ISO string

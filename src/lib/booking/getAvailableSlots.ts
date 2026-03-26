@@ -69,8 +69,8 @@ export async function getAvailableSlots(
   const { data: bookings, error: bookingsError } = await supabase
     .from("bookings")
     .select("starts_at, ends_at")
-    .eq("admin_id", trainerId)
-    .in("status", activeBookingStatuses)
+    .eq("trainer_id", trainerId)
+    .in("booking_status", activeBookingStatuses)
     .gte("starts_at", now.toISOString())
     .lte("starts_at", lookaheadDate.toISOString());
 
