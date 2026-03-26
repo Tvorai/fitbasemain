@@ -81,8 +81,13 @@ const AvailableSlots: React.FC<AvailableSlotsProps> = ({
     const now = new Date();
     const todayKey = formatDayKey(now);
     const keysWithSlots = new Set(slots.map((s) => formatDayKey(new Date(s.starts_at))));
-    const defaultKey = keysWithSlots.has(todayKey) ? todayKey : Array.from(keysWithSlots).sort()[0];
-    setSelectedDayKey(defaultKey || todayKey);
+    if (keysWithSlots.has(todayKey)) {
+      setSelectedDayKey(todayKey);
+      return;
+    }
+
+    const firstKey = Array.from(keysWithSlots).sort()[0];
+    setSelectedDayKey(firstKey || todayKey);
   }, [slots]);
 
   const handleSlotSelect = (slot: AvailableSlot) => {
@@ -108,14 +113,28 @@ const AvailableSlots: React.FC<AvailableSlotsProps> = ({
   const now = new Date();
   const rangeStart = now;
   const rangeEnd = new Date(now);
-  rangeEnd.setDate(now.getDate() + 7);
+  rangeEnd.setDate(now.getDate() + 6);
 
-  const days = Array.from({ length: 7 }, (_, i) => {
+  const windowDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now);
     d.setHours(0, 0, 0, 0);
     d.setDate(now.getDate() + i);
     return d;
   });
+
+  const getWeekdayNumber = (date: Date): number => {
+    const js = date.getDay(); // 0=Sun..6=Sat
+    return js === 0 ? 7 : js; // 1=Mon..7=Sun
+  };
+
+  const daysByWeekday = windowDays.reduce((acc, d) => {
+    acc.set(getWeekdayNumber(d), d);
+    return acc;
+  }, new Map<number, Date>());
+
+  const days = Array.from({ length: 7 }, (_, i) => daysByWeekday.get(i + 1)).filter(
+    (d): d is Date => Boolean(d)
+  );
 
   const slotsByDayKey = slots.reduce((acc, slot) => {
     const key = formatDayKey(new Date(slot.starts_at));
