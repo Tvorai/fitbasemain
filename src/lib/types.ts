@@ -6,11 +6,13 @@ export type Trainer = {
   location: string;
 };
 
+export type DayName = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+
 // Doplnený typ Slot pre availability_slots tabuľku
 export type Slot = {
   id: string;
   trainer_id: string;
-  day_of_week: number; // smallint v DB, TypeScript number
+  day_name: DayName; // Enum v DB
   start_time: string; // time v DB, tu string (napr. "09:00:00")
   end_time: string;   // time v DB, tu string (napr. "10:00:00")
   is_active: boolean; // Indikátor aktivity slotu
