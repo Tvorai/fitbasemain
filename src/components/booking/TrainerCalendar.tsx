@@ -18,14 +18,15 @@ export default function TrainerCalendar({ trainerId }: TrainerCalendarProps) {
       setLoading(true);
       try {
         const res = await fetch(`/api/public-trainer/slots?trainerId=${trainerId}`);
-        const data = await res.json();
-        if (data.ok) {
-          setSlots(data.slots);
+        if (res.ok) {
+          const fetchedSlots = await res.json();
+          setSlots(fetchedSlots);
         } else {
-          setError(data.message);
+          const errorData = await res.json();
+          setError(errorData.message || "Nepodarilo sa načítať voľné termíny.");
         }
       } catch (err) {
-        setError("Nepodarilo sa načítať voľné termíny.");
+        setError("Chyba pri komunikácii so serverom.");
       } finally {
         setLoading(false);
       }
