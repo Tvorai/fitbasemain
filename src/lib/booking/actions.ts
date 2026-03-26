@@ -59,7 +59,8 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
   try {
     // 2. Kontrola, či slot už nie je obsadený (Race condition protection na serveri)
     // Hľadáme aktívne rezervácie (nie zrušené), ktoré sa prekrývajú s vybraným časom.
-    const activeStatuses: BookingStatus[] = ["pending", "pending_payment", "confirmed"];
+    // POZNÁMKA: "pending_payment" vynechaný, kým nebude pridaný do DB enumu
+    const activeStatuses: BookingStatus[] = ["pending", "confirmed"];
     const { data: existingBookings, error: checkError } = await supabase
       .from("bookings")
       .select("id")
