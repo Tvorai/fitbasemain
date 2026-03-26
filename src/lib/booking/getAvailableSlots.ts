@@ -2,7 +2,7 @@
 import { createClient } from "@supabase/supabase-js";
 // Force Vercel redeploy again
 // Force Vercel redeploy again
-import { Booking, BookingStatus, Slot } from "@/lib/types";
+import { BookingStatus, Slot } from "@/lib/types";
 
 /**
  * Nový typ pre konkrétny vypočítaný voľný termín.
@@ -23,6 +23,98 @@ function doRangesOverlap(startA: Date, endA: Date, startB: Date, endB: Date): bo
   return startA < endB && startB < endA;
 }
 
+type DateParts = { year: number; month: number; day: number };
+
+function getDatePartsInTimeZone(date: Date, timeZone: string): DateParts {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(date);
+
+  const yearStr = parts.find((p) => p.type === "year")?.value;
+  const monthStr = parts.find((p) => p.type === "month")?.value;
+  const dayStr = parts.find((p) => p.type === "day")?.value;
+
+  if (!yearStr || !monthStr || !dayStr) {
+    throw new Error("Failed to resolve date parts for timezone");
+  }
+
+  return { year: Number(yearStr), month: Number(monthStr), day: Number(dayStr) };
+}
+
+function addDaysToDateParts(base: DateParts, offsetDays: number): DateParts {
+  const dt = new Date(Date.UTC(base.year, base.month - 1, base.day + offsetDays, 12, 0, 0));
+  return {
+    year: dt.getUTCFullYear(),
+    month: dt.getUTCMonth() + 1,
+    day: dt.getUTCDate(),
+  };
+}
+
+function getTimeZoneOffsetMinutes(date: Date, timeZone: string): number {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts = dtf.formatToParts(date);
+  const yearStr = parts.find((p) => p.type === "year")?.value;
+  const monthStr = parts.find((p) => p.type === "month")?.value;
+  const dayStr = parts.find((p) => p.type === "day")?.value;
+  const hourStr = parts.find((p) => p.type === "hour")?.value;
+  const minuteStr = parts.find((p) => p.type === "minute")?.value;
+  const secondStr = parts.find((p) => p.type === "second")?.value;
+
+  if (!yearStr || !monthStr || !dayStr || !hourStr || !minuteStr || !secondStr) {
+    throw new Error("Failed to resolve timezone offset");
+  }
+
+  const asUtc = Date.UTC(
+    Number(yearStr),
+    Number(monthStr) - 1,
+    Number(dayStr),
+    Number(hourStr),
+    Number(minuteStr),
+    Number(secondStr)
+  );
+
+  return (asUtc - date.getTime()) / 60000;
+}
+
+function zonedTimeToUtc(parts: DateParts, hour: number, minute: number, timeZone: string): Date {
+  const naiveUtc = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, hour, minute, 0));
+  const offset1 = getTimeZoneOffsetMinutes(naiveUtc, timeZone);
+  const adjusted = new Date(naiveUtc.getTime() - offset1 * 60000);
+  const offset2 = getTimeZoneOffsetMinutes(adjusted, timeZone);
+  if (offset2 !== offset1) {
+    return new Date(naiveUtc.getTime() - offset2 * 60000);
+  }
+  return adjusted;
+}
+
+function parseTimeToHourMinute(value: string): { hour: number; minute: number } {
+  const [h, m] = value.split(":");
+  const hour = Number(h);
+  const minute = Number(m);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+    throw new Error(`Invalid time value: ${value}`);
+  }
+  return { hour, minute };
+}
+
+function getDbDayOfWeek(parts: DateParts): number {
+  const js = new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay(); // 0..6, 0=Sun
+  return js === 0 ? 7 : js; // 1=Mon .. 7=Sun
+}
+
 /**
  * Hlavná server-side funkcia na výpočet konkrétnych voľných termínov trénera.
  * @param trainerId ID trénera, pre ktorého sa hľadajú termíny.
@@ -33,7 +125,8 @@ function doRangesOverlap(startA: Date, endA: Date, startB: Date, endB: Date): bo
 export async function getAvailableSlots(
   trainerId: string,
   lookaheadDays: number = 14,
-  slotDurationMinutes: number = 60
+  slotDurationMinutes: number = 60,
+  maxSlots: number = 30
 ): Promise<AvailableSlot[] | null> {
   console.log(`[getAvailableSlots] Start pre trainerId: ${trainerId}`);
   
@@ -53,8 +146,10 @@ export async function getAvailableSlots(
   });
 
   const now = new Date();
-  const lookaheadDate = new Date(now);
-  lookaheadDate.setDate(now.getDate() + lookaheadDays);
+  const timeZone = "Europe/Bratislava";
+  const todayInTz = getDatePartsInTimeZone(now, timeZone);
+  const endInTz = addDaysToDateParts(todayInTz, lookaheadDays);
+  const lookaheadEndUtc = zonedTimeToUtc(endInTz, 23, 59, timeZone);
 
   console.log(`[getAvailableSlots] Načítanie availability_slots pre trainerId: ${trainerId}...`);
   // 1. Načítanie aktívnych pravidiel dostupnosti pre trénera
@@ -82,7 +177,7 @@ export async function getAvailableSlots(
     .eq("trainer_id", trainerId)
     .in("booking_status", activeBookingStatuses)
     .gte("starts_at", now.toISOString())
-    .lte("starts_at", lookaheadDate.toISOString());
+    .lte("starts_at", lookaheadEndUtc.toISOString());
 
   if (bookingsError) {
     console.error("[getAvailableSlots] Chyba pri dopyte na bookings:", bookingsError);
@@ -102,53 +197,49 @@ export async function getAvailableSlots(
   const finalAvailableSlots: AvailableSlot[] = [];
   const slotDurationMs = slotDurationMinutes * 60 * 1000;
 
-  // 3. Iterácia cez dni v požadovanom rozsahu
-  for (let i = 0; i < lookaheadDays; i++) {
-    const day = new Date(now);
-    day.setDate(now.getDate() + i);
-    day.setHours(0, 0, 0, 0); // Normalizácia na začiatok dňa
+  for (let offsetDays = 0; offsetDays <= lookaheadDays; offsetDays++) {
+    if (finalAvailableSlots.length >= maxSlots) break;
 
-    const jsDayOfWeek = day.getDay(); // 0 = Nedeľa, 1 = Pondelok, ..., 6 = Sobota
-    const supabaseDayOfWeek = jsDayOfWeek === 0 ? 7 : jsDayOfWeek; // Konverzia na Supabase formát (1-7)
+    const dayParts = addDaysToDateParts(todayInTz, offsetDays);
+    const dayOfWeek = getDbDayOfWeek(dayParts);
 
-    const rulesForThisDay = availabilityRules.filter(rule => rule.day_of_week === supabaseDayOfWeek);
+    const rulesForThisDay = availabilityRules.filter((rule) => rule.day_of_week === dayOfWeek);
+    if (rulesForThisDay.length === 0) continue;
 
-    // 4. Pre každé pravidlo generujeme 60-minútové termíny
     for (const rule of rulesForThisDay) {
-      const [startHours, startMinutes] = rule.start_time.split(':').map(Number);
-      const [endHours, endMinutes] = rule.end_time.split(':').map(Number);
+      if (finalAvailableSlots.length >= maxSlots) break;
 
-      const ruleStartDateTime = new Date(day);
-      ruleStartDateTime.setHours(startHours, startMinutes, 0, 0);
+      const start = parseTimeToHourMinute(rule.start_time);
+      const end = parseTimeToHourMinute(rule.end_time);
 
-      const ruleEndDateTime = new Date(day);
-      ruleEndDateTime.setHours(endHours, endMinutes, 0, 0);
+      const ruleStartUtc = zonedTimeToUtc(dayParts, start.hour, start.minute, timeZone);
+      const ruleEndUtc = zonedTimeToUtc(dayParts, end.hour, end.minute, timeZone);
 
-      let currentSlotStart = new Date(ruleStartDateTime);
+      let currentSlotStartUtc = new Date(ruleStartUtc.getTime());
+      while (currentSlotStartUtc.getTime() + slotDurationMs <= ruleEndUtc.getTime()) {
+        if (finalAvailableSlots.length >= maxSlots) break;
 
-      while (currentSlotStart.getTime() + slotDurationMs <= ruleEndDateTime.getTime()) {
-        const currentSlotEnd = new Date(currentSlotStart.getTime() + slotDurationMs);
+        const currentSlotEndUtc = new Date(currentSlotStartUtc.getTime() + slotDurationMs);
 
-        // 5. Filtrovanie - ignoruj minulé a obsadené termíny
-        if (currentSlotStart < now) {
-          currentSlotStart = currentSlotEnd; // Posun na ďalší slot
+        if (currentSlotStartUtc < now) {
+          currentSlotStartUtc = currentSlotEndUtc;
           continue;
         }
 
-        const isOccupied = occupiedRanges.some(occupied =>
-          doRangesOverlap(currentSlotStart, currentSlotEnd, occupied.start, occupied.end)
+        const isOccupied = occupiedRanges.some((occupied) =>
+          doRangesOverlap(currentSlotStartUtc, currentSlotEndUtc, occupied.start, occupied.end)
         );
 
         if (!isOccupied) {
           finalAvailableSlots.push({
             trainer_id: trainerId,
-            starts_at: currentSlotStart.toISOString(),
-            ends_at: currentSlotEnd.toISOString(),
+            starts_at: currentSlotStartUtc.toISOString(),
+            ends_at: currentSlotEndUtc.toISOString(),
             source_availability_slot_id: rule.id,
           });
         }
 
-        currentSlotStart = currentSlotEnd; // Posun na ďalší slot
+        currentSlotStartUtc = currentSlotEndUtc;
       }
     }
   }
