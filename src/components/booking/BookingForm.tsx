@@ -55,8 +55,7 @@ export default function BookingForm({
 
     try {
       const result = await createBookingAction({
-        slot_id: selectedSlot.source_availability_slot_id,
-        admin_id: selectedSlot.trainer_id,
+        trainer_id: selectedSlot.trainer_id,
         starts_at: selectedSlot.starts_at,
         ends_at: selectedSlot.ends_at,
         client_name: values.client_name,

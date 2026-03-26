@@ -7,12 +7,11 @@ import {
   getClientConfirmationEmailHtml, 
   getAdminNotificationEmailHtml 
 } from "@/lib/email/emailService";
-import { BookingStatus, PaymentStatus } from "@/lib/types";
+import { BookingStatus } from "@/lib/types";
 
 // Schema pre validáciu booking formulára
 const bookingSchema = z.object({
-  slot_id: z.string().uuid(),
-  admin_id: z.string().uuid(),
+  trainer_id: z.string().uuid(),
   starts_at: z.string().datetime(),
   ends_at: z.string().datetime(),
   client_name: z.string().min(2, "Meno musí mať aspoň 2 znaky"),
@@ -28,6 +27,12 @@ export type BookingFormState =
   | { status: "success"; message: string }
   | { status: "error"; message: string };
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return "Unknown error";
+}
+
 /**
  * Server Action pre vytvorenie rezervácie.
  */
@@ -39,7 +44,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
   }
 
   const { 
-    slot_id, admin_id, starts_at, ends_at, 
+    trainer_id, starts_at, ends_at, 
     client_name, client_email, client_phone, note,
     trainer_name, trainer_email
   } = validatedFields.data;
@@ -61,46 +66,63 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
     // Hľadáme aktívne rezervácie (nie zrušené), ktoré sa prekrývajú s vybraným časom.
     // POZNÁMKA: "pending_payment" vynechaný, kým nebude pridaný do DB enumu
     const activeStatuses: BookingStatus[] = ["pending", "confirmed"];
-    const { data: existingBookings, error: checkError } = await supabase
+    const { data: overlaps, error: checkError } = await supabase
       .from("bookings")
       .select("id")
-      .eq("trainer_id", admin_id)
+      .eq("trainer_id", trainer_id)
       .in("booking_status", activeStatuses)
-      .eq("starts_at", starts_at)
-      .maybeSingle();
+      .lt("starts_at", ends_at)
+      .gt("ends_at", starts_at)
+      .limit(1);
 
     if (checkError) throw checkError;
-    if (existingBookings) {
+    if (Array.isArray(overlaps) && overlaps.length > 0) {
       return { status: "error", message: "Tento termín už nie je dostupný. Prosím, vyberte si iný." };
     }
 
     // 3. Vytvorenie záznamu v 'bookings' tabuľke
-    const { data: newBooking, error: insertError } = await supabase
-      .from("bookings")
-      .insert({
-        trainer_id: admin_id,
-        starts_at,
-        ends_at,
-        client_name,
-        client_email,
-        client_phone,
-        client_note: note,
-        booking_status: "pending" as BookingStatus, // Predvolený status
-        payment_status: "unpaid" as PaymentStatus,
-      })
-      .select()
-      .single();
+    const insertPayload = {
+      trainer_id,
+      starts_at,
+      ends_at,
+      client_name,
+      client_email,
+      client_phone,
+      client_note: note,
+      booking_status: "pending" as BookingStatus,
+    };
 
-    if (insertError) {
+    let insertResult = await supabase.from("bookings").insert(insertPayload).select("id").maybeSingle();
+
+    if (insertResult.error) {
+      const message = insertResult.error.message || "";
+      if (message.toLowerCase().includes("client_note") || message.toLowerCase().includes("column")) {
+        const fallbackPayload = {
+          trainer_id,
+          starts_at,
+          ends_at,
+          client_name,
+          client_email,
+          client_phone,
+          note,
+          booking_status: "pending" as BookingStatus,
+        };
+        insertResult = await supabase.from("bookings").insert(fallbackPayload).select("id").maybeSingle();
+      }
+    }
+
+    if (insertResult.error) {
       // Špecifická kontrola na unikátny index (v prípade race condition, ktorú SELECT nezachytil)
-      if (insertError.code === "23505") {
+      if (insertResult.error.code === "23505") {
         return { status: "error", message: "Tento termín bol práve rezervovaný niekým iným." };
       }
-      throw insertError;
+      console.error("Chyba pri inserte bookingu:", insertResult.error);
+      return { status: "error", message: insertResult.error.message || "Nepodarilo sa vytvoriť rezerváciu." };
     }
 
     // 4. Odoslanie emailov (Asynchrónne, neblokujeme odpoveď)
     const dateFormatted = new Date(starts_at).toLocaleString("sk-SK", {
+      timeZone: "Europe/Bratislava",
       weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit"
     });
 
@@ -108,8 +130,8 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
     sendEmail({
       to: client_email,
       subject: `Potvrdenie rezervácie - Fitbase`,
-      html: getClientConfirmationEmailHtml(client_name, dateFormatted, trainer_name || "Tréner")
-    }).catch(err => console.error("Chyba pri odosielaní emailu klientovi:", err));
+      html: getClientConfirmationEmailHtml(client_name, dateFormatted, trainer_name || "Tréner", trainer_email || null)
+    }).catch((err: unknown) => console.error("Chyba pri odosielaní emailu klientovi:", getErrorMessage(err)));
 
     // Email adminovi (ak máme email)
     if (trainer_email) {
@@ -117,13 +139,13 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
         to: trainer_email,
         subject: `Nová rezervácia - ${client_name}`,
         html: getAdminNotificationEmailHtml(client_name, client_email, client_phone || null, dateFormatted, note || null)
-      }).catch(err => console.error("Chyba pri odosielaní emailu adminovi:", err));
+      }).catch((err: unknown) => console.error("Chyba pri odosielaní emailu adminovi:", getErrorMessage(err)));
     }
 
     return { status: "success", message: "Rezervácia bola úspešne vytvorená. Čoskoro vás budeme kontaktovať." };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Chyba pri vytváraní rezervácie:", error);
-    return { status: "error", message: "Nastala neočakávaná chyba pri spracovaní rezervácie." };
+    return { status: "error", message: getErrorMessage(error) || "Nastala neočakávaná chyba pri spracovaní rezervácie." };
   }
 }

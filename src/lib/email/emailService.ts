@@ -6,28 +6,63 @@ type EmailParams = {
   html: string;
 };
 
-/**
- * Jednoduchá vrstva pre odosielanie emailov.
- * Aktuálne loguje do konzoly, pripravené na integráciu s Resend, SendGrid, atď.
- */
-export async function sendEmail({ to, subject, html }: EmailParams) {
-  console.log(`[Email Service] Odosielam email na: ${to}`);
-  console.log(`[Email Service] Predmet: ${subject}`);
-  // Tu by prišla integrácia napr. s Resend:
-  // const { data, error } = await resend.emails.send({ from: 'Fitbase <noreply@fitbase.sk>', to, subject, html });
-  
-  // Pre účely testovania vracíme success
-  return { success: true };
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+export async function sendEmail({ to, subject, html }: EmailParams): Promise<{ success: boolean }> {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM || "Fitbase <onboarding@resend.dev>";
+
+  if (!resendApiKey) {
+    console.warn("[Email Service] RESEND_API_KEY chýba, email preskakujem.");
+    return { success: false };
+  }
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to,
+        subject,
+        html,
+      }),
+    });
+
+    if (!res.ok) {
+      const payload: unknown = await res.json().catch(() => null);
+      const details = isRecord(payload) && typeof payload.message === "string" ? payload.message : `HTTP ${res.status}`;
+      console.warn(`[Email Service] Resend zlyhal: ${details}`);
+      return { success: false };
+    }
+
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.warn(`[Email Service] Resend request zlyhal: ${message}`);
+    return { success: false };
+  }
 }
 
 /**
  * Šablóna pre potvrdzovací email pre klienta.
  */
-export function getClientConfirmationEmailHtml(clientName: string, dateStr: string, trainerName: string) {
+export function getClientConfirmationEmailHtml(
+  clientName: string,
+  dateStr: string,
+  trainerName: string,
+  trainerEmail?: string | null
+) {
   return `
     <h1>Potvrdenie rezervácie</h1>
     <p>Ahoj ${clientName},</p>
     <p>Tvoja rezervácia na termín <strong>${dateStr}</strong> u trénera <strong>${trainerName}</strong> bola úspešne prijatá.</p>
+    ${trainerEmail ? `<p>Kontakt na trénera: <strong>${trainerEmail}</strong></p>` : ``}
     <p>Tešíme sa na teba!</p>
     <p>Tím Fitbase</p>
   `;

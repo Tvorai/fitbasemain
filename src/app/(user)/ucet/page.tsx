@@ -158,7 +158,7 @@ export default function UserAccountPage() {
       case "sluzby":
         return (
           <div className="flex flex-col gap-6 w-full max-w-[760px] ml-auto">
-            <ClientBookings userId={userId} />
+            <ClientBookings userId={userId} userEmail={email} />
           </div>
         );
 

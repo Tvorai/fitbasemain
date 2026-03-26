@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Booking } from "@/lib/types";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseUrl, supabaseAnonKey } from "@/lib/config";
 
@@ -9,10 +8,54 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface ClientBookingsProps {
   userId: string;
+  userEmail: string;
 }
 
-export default function ClientBookings({ userId }: ClientBookingsProps) {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+type ClientBookingItem = {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  trainerName: string;
+  trainerEmail: string | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getNested(obj: Record<string, unknown>, key: string): unknown {
+  return obj[key];
+}
+
+function toClientBookingItem(value: unknown): ClientBookingItem | null {
+  if (!isRecord(value)) return null;
+  const id = value.id;
+  const startsAt = value.starts_at;
+  const endsAt = value.ends_at;
+  const status = value.booking_status;
+  if (typeof id !== "string" || typeof startsAt !== "string" || typeof endsAt !== "string" || typeof status !== "string") {
+    return null;
+  }
+
+  const trainers = getNested(value, "trainers");
+  const profiles = isRecord(trainers) ? getNested(trainers, "profiles") : null;
+
+  const fullName = isRecord(profiles) && typeof profiles.full_name === "string" ? profiles.full_name : null;
+  const email = isRecord(profiles) && typeof profiles.email === "string" ? profiles.email : null;
+
+  return {
+    id,
+    startsAt,
+    endsAt,
+    status,
+    trainerName: fullName && fullName.trim() ? fullName : "Neznámy tréner",
+    trainerEmail: email,
+  };
+}
+
+export default function ClientBookings({ userId, userEmail }: ClientBookingsProps) {
+  const [bookings, setBookings] = useState<ClientBookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,17 +63,24 @@ export default function ClientBookings({ userId }: ClientBookingsProps) {
     async function fetchBookings() {
       setLoading(true);
       try {
-        // Find bookings by client_profile_id or client_email (if we had it, but here profile_id is better)
-        const { data, error } = await supabase
+        const query = supabase
           .from("bookings")
-          .select("*, trainers(profiles(full_name, email))")
-          .eq("client_profile_id", userId)
+          .select("id, starts_at, ends_at, booking_status, trainers(profiles(full_name,email))")
           .order("starts_at", { ascending: false });
 
+        const trimmedEmail = userEmail.trim().toLowerCase();
+        const escapedEmail = trimmedEmail.replace(/"/g, '\\"');
+
+        const { data, error } = trimmedEmail
+          ? await query.or(`client_profile_id.eq.${userId},client_email.eq."${escapedEmail}"`)
+          : await query.eq("client_profile_id", userId);
+
         if (error) throw error;
-        setBookings(data || []);
-      } catch (err: any) {
-        setError("Nepodarilo sa načítať vaše služby.");
+        const payload: unknown = data;
+        const mapped = Array.isArray(payload) ? payload.map(toClientBookingItem).filter((x): x is ClientBookingItem => x !== null) : [];
+        setBookings(mapped);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Nepodarilo sa načítať vaše služby.");
       } finally {
         setLoading(false);
       }
@@ -39,7 +89,7 @@ export default function ClientBookings({ userId }: ClientBookingsProps) {
     if (userId) {
       fetchBookings();
     }
-  }, [userId]);
+  }, [userId, userEmail]);
 
   if (loading) return <div className="text-zinc-500 animate-pulse">Načítavam služby...</div>;
   if (error) return <div className="text-red-400 text-sm">Chyba: {error}</div>;
@@ -54,13 +104,13 @@ export default function ClientBookings({ userId }: ClientBookingsProps) {
                 <div>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1">Tréner</p>
                   <p className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">
-                    {(booking as any).trainers?.profiles?.full_name || "Neznámy tréner"}
+                    {booking.trainerName}
                   </p>
                 </div>
                 <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase ${
-                  booking.booking_status === "confirmed" ? "bg-emerald-500/20 text-emerald-500" : "bg-zinc-800 text-zinc-500"
+                  booking.status === "confirmed" ? "bg-emerald-500/20 text-emerald-500" : "bg-zinc-800 text-zinc-500"
                 }`}>
-                  {booking.booking_status}
+                  {booking.status}
                 </span>
               </div>
               
@@ -72,9 +122,9 @@ export default function ClientBookings({ userId }: ClientBookingsProps) {
                     </svg>
                   </div>
                   <div>
-                    <p className="font-bold text-zinc-200">{new Date(booking.starts_at).toLocaleDateString("sk-SK")}</p>
+                    <p className="font-bold text-zinc-200">{new Date(booking.startsAt).toLocaleDateString("sk-SK")}</p>
                     <p className="text-xs text-zinc-500">
-                      {new Date(booking.starts_at).toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" })} - {new Date(booking.ends_at).toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" })}
+                      {new Date(booking.startsAt).toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" })} - {new Date(booking.endsAt).toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
                 </div>
@@ -85,7 +135,7 @@ export default function ClientBookings({ userId }: ClientBookingsProps) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <p className="text-zinc-400">{(booking as any).trainers?.profiles?.email || "Bez kontaktu"}</p>
+                  <p className="text-zinc-400">{booking.trainerEmail || "Bez kontaktu"}</p>
                 </div>
               </div>
             </div>
