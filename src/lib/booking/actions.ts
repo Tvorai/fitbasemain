@@ -153,6 +153,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
       if (message.toLowerCase().includes("client_note") || message.toLowerCase().includes("column")) {
         const fallbackPayload = {
           trainer_id,
+          service_id: resolvedService.id,
           starts_at,
           ends_at,
           client_name,
