@@ -16,6 +16,7 @@ type ClientBookingItem = {
   startsAt: string;
   endsAt: string;
   status: string;
+  trainerId: string;
   trainerName: string;
   trainerEmail: string | null;
 };
@@ -28,29 +29,47 @@ function getNested(obj: Record<string, unknown>, key: string): unknown {
   return obj[key];
 }
 
-function toClientBookingItem(value: unknown): ClientBookingItem | null {
+type BookingRow = {
+  id: string;
+  trainer_id: string;
+  starts_at: string;
+  ends_at: string;
+  booking_status: string;
+};
+
+function toBookingRow(value: unknown): BookingRow | null {
   if (!isRecord(value)) return null;
   const id = value.id;
+  const trainerId = value.trainer_id;
   const startsAt = value.starts_at;
   const endsAt = value.ends_at;
   const status = value.booking_status;
-  if (typeof id !== "string" || typeof startsAt !== "string" || typeof endsAt !== "string" || typeof status !== "string") {
+  if (
+    typeof id !== "string" ||
+    typeof trainerId !== "string" ||
+    typeof startsAt !== "string" ||
+    typeof endsAt !== "string" ||
+    typeof status !== "string"
+  ) {
     return null;
   }
+  return { id, trainer_id: trainerId, starts_at: startsAt, ends_at: endsAt, booking_status: status };
+}
 
-  const trainers = getNested(value, "trainers");
-  const profiles = isRecord(trainers) ? getNested(trainers, "profiles") : null;
+type TrainerContact = { name: string; email: string | null };
 
+function toTrainerContact(value: unknown): { trainerId: string; contact: TrainerContact } | null {
+  if (!isRecord(value)) return null;
+  const trainerId = value.id;
+  if (typeof trainerId !== "string") return null;
+
+  const profiles = getNested(value, "profiles");
   const fullName = isRecord(profiles) && typeof profiles.full_name === "string" ? profiles.full_name : null;
   const email = isRecord(profiles) && typeof profiles.email === "string" ? profiles.email : null;
 
   return {
-    id,
-    startsAt,
-    endsAt,
-    status,
-    trainerName: fullName && fullName.trim() ? fullName : "Neznámy tréner",
-    trainerEmail: email,
+    trainerId,
+    contact: { name: fullName && fullName.trim() ? fullName : "Neznámy tréner", email },
   };
 }
 
@@ -65,7 +84,7 @@ export default function ClientBookings({ userId, userEmail }: ClientBookingsProp
       try {
         const query = supabase
           .from("bookings")
-          .select("id, starts_at, ends_at, booking_status, trainers(profiles(full_name,email))")
+          .select("id, trainer_id, starts_at, ends_at, booking_status, client_profile_id, client_email")
           .order("starts_at", { ascending: false });
 
         const trimmedEmail = userEmail.trim().toLowerCase();
@@ -77,7 +96,39 @@ export default function ClientBookings({ userId, userEmail }: ClientBookingsProp
 
         if (error) throw error;
         const payload: unknown = data;
-        const mapped = Array.isArray(payload) ? payload.map(toClientBookingItem).filter((x): x is ClientBookingItem => x !== null) : [];
+        const rows = Array.isArray(payload) ? payload.map(toBookingRow).filter((x): x is BookingRow => x !== null) : [];
+
+        const trainerIds = Array.from(new Set(rows.map((r) => r.trainer_id))).filter((id) => id);
+
+        const contactsByTrainerId = new Map<string, TrainerContact>();
+        if (trainerIds.length > 0) {
+          const trainerRes = await supabase
+            .from("trainers")
+            .select("id, profiles(full_name,email)")
+            .in("id", trainerIds);
+
+          const trainerPayload: unknown = trainerRes.data;
+          if (!trainerRes.error && Array.isArray(trainerPayload)) {
+            for (const item of trainerPayload) {
+              const parsed = toTrainerContact(item);
+              if (parsed) contactsByTrainerId.set(parsed.trainerId, parsed.contact);
+            }
+          }
+        }
+
+        const mapped: ClientBookingItem[] = rows.map((r) => {
+          const contact = contactsByTrainerId.get(r.trainer_id);
+          return {
+            id: r.id,
+            trainerId: r.trainer_id,
+            startsAt: r.starts_at,
+            endsAt: r.ends_at,
+            status: r.booking_status,
+            trainerName: contact?.name || "Neznámy tréner",
+            trainerEmail: contact?.email || null,
+          };
+        });
+
         setBookings(mapped);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Nepodarilo sa načítať vaše služby.");
