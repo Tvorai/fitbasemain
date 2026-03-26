@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { 
   sendEmail, 
   getClientConfirmationEmailHtml, 
@@ -12,6 +13,7 @@ import { BookingStatus } from "@/lib/types";
 // Schema pre validáciu booking formulára
 const bookingSchema = z.object({
   trainer_id: z.string().uuid(),
+  service_id: z.string().uuid().optional(),
   starts_at: z.string().datetime(),
   ends_at: z.string().datetime(),
   client_name: z.string().min(2, "Meno musí mať aspoň 2 znaky"),
@@ -33,6 +35,46 @@ function getErrorMessage(error: unknown): string {
   return "Unknown error";
 }
 
+type ResolvedService = { id: string; name: string | null };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getStringOrNull(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function pickServiceFromRow(value: unknown): ResolvedService | null {
+  if (!isRecord(value)) return null;
+  const id = value.id;
+  if (typeof id !== "string") return null;
+
+  const name = getStringOrNull(value.name) ?? getStringOrNull(value.title) ?? getStringOrNull(value.service_name);
+  return { id, name };
+}
+
+async function resolveServiceForBooking(supabase: SupabaseClient, trainerId: string): Promise<ResolvedService | null> {
+  const primary = await supabase
+    .from("services")
+    .select("id, name")
+    .eq("trainer_id", trainerId)
+    .limit(1);
+
+  if (!primary.error) {
+    const payload: unknown = primary.data;
+    if (Array.isArray(payload) && payload.length > 0) return pickServiceFromRow(payload[0]);
+  }
+
+  const fallback = await supabase.from("services").select("id, name").limit(1);
+  if (!fallback.error) {
+    const payload: unknown = fallback.data;
+    if (Array.isArray(payload) && payload.length > 0) return pickServiceFromRow(payload[0]);
+  }
+
+  return null;
+}
+
 /**
  * Server Action pre vytvorenie rezervácie.
  */
@@ -44,7 +86,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
   }
 
   const { 
-    trainer_id, starts_at, ends_at, 
+    trainer_id, service_id, starts_at, ends_at, 
     client_name, client_email, client_phone, note,
     trainer_name, trainer_email
   } = validatedFields.data;
@@ -62,6 +104,17 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
   });
 
   try {
+    const resolvedService: ResolvedService | null = service_id
+      ? { id: service_id, name: null }
+      : await resolveServiceForBooking(supabase, trainer_id);
+
+    if (!resolvedService) {
+      return {
+        status: "error",
+        message: "Chýba služba pre rezerváciu (service_id). Skontroluj tabuľku services alebo doplň service_id.",
+      };
+    }
+
     // 2. Kontrola, či slot už nie je obsadený (Race condition protection na serveri)
     // Hľadáme aktívne rezervácie (nie zrušené), ktoré sa prekrývajú s vybraným časom.
     // POZNÁMKA: "pending_payment" vynechaný, kým nebude pridaný do DB enumu
@@ -83,6 +136,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
     // 3. Vytvorenie záznamu v 'bookings' tabuľke
     const insertPayload = {
       trainer_id,
+      service_id: resolvedService.id,
       starts_at,
       ends_at,
       client_name,
@@ -130,7 +184,13 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
     sendEmail({
       to: client_email,
       subject: `Potvrdenie rezervácie - Fitbase`,
-      html: getClientConfirmationEmailHtml(client_name, dateFormatted, trainer_name || "Tréner", trainer_email || null)
+      html: getClientConfirmationEmailHtml(
+        client_name,
+        dateFormatted,
+        trainer_name || "Tréner",
+        trainer_email || null,
+        resolvedService.name
+      )
     }).catch((err: unknown) => console.error("Chyba pri odosielaní emailu klientovi:", getErrorMessage(err)));
 
     // Email adminovi (ak máme email)
@@ -138,7 +198,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
       sendEmail({
         to: trainer_email,
         subject: `Nová rezervácia - ${client_name}`,
-        html: getAdminNotificationEmailHtml(client_name, client_email, client_phone || null, dateFormatted, note || null)
+        html: getAdminNotificationEmailHtml(client_name, client_email, client_phone || null, dateFormatted, note || null, resolvedService.name)
       }).catch((err: unknown) => console.error("Chyba pri odosielaní emailu adminovi:", getErrorMessage(err)));
     }
 

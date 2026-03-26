@@ -56,12 +56,13 @@ export function getClientConfirmationEmailHtml(
   clientName: string,
   dateStr: string,
   trainerName: string,
-  trainerEmail?: string | null
+  trainerEmail?: string | null,
+  serviceName?: string | null
 ) {
   return `
     <h1>Potvrdenie rezervácie</h1>
     <p>Ahoj ${clientName},</p>
-    <p>Tvoja rezervácia na termín <strong>${dateStr}</strong> u trénera <strong>${trainerName}</strong> bola úspešne prijatá.</p>
+    <p>Tvoja rezervácia${serviceName ? ` (<strong>${serviceName}</strong>)` : ``} na termín <strong>${dateStr}</strong> u trénera <strong>${trainerName}</strong> bola úspešne prijatá.</p>
     ${trainerEmail ? `<p>Kontakt na trénera: <strong>${trainerEmail}</strong></p>` : ``}
     <p>Tešíme sa na teba!</p>
     <p>Tím Fitbase</p>
@@ -71,10 +72,18 @@ export function getClientConfirmationEmailHtml(
 /**
  * Šablóna pre notifikačný email pre admina (trénera).
  */
-export function getAdminNotificationEmailHtml(clientName: string, clientEmail: string, clientPhone: string | null, dateStr: string, note: string | null) {
+export function getAdminNotificationEmailHtml(
+  clientName: string,
+  clientEmail: string,
+  clientPhone: string | null,
+  dateStr: string,
+  note: string | null,
+  serviceName?: string | null
+) {
   return `
     <h1>Nová rezervácia</h1>
     <p>Máte novú rezerváciu od klienta <strong>${clientName}</strong>.</p>
+    ${serviceName ? `<p><strong>Služba:</strong> ${serviceName}</p>` : ``}
     <p><strong>Termín:</strong> ${dateStr}</p>
     <p><strong>Email:</strong> ${clientEmail}</p>
     <p><strong>Telefón:</strong> ${clientPhone || 'neuvedené'}</p>
