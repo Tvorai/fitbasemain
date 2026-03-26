@@ -30,6 +30,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
   const [trainer, setTrainer] = useState<TrainerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [shareBusy, setShareBusy] = useState(false);
   const swipeRef = useRef<{
     startX: number;
     startY: number;
@@ -250,6 +251,46 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
     };
   }, [p5Ready, threeReady, vantaReady]);
 
+  const handleShare = useCallback(async () => {
+    if (!trainer) return;
+    if (typeof window === "undefined") return;
+    if (shareBusy) return;
+
+    const nav = window.navigator;
+    const name = trainer.profiles?.full_name?.trim() || "Fitbase tréner";
+    const url = `${window.location.origin}/t/${trainer.id}`;
+
+    setShareBusy(true);
+    try {
+      const share = (nav as any).share;
+      if (typeof share === "function") {
+        await share.call(nav, { title: name, url });
+        return;
+      }
+
+      const clipboard = (nav as any).clipboard;
+      if (clipboard && typeof clipboard.writeText === "function") {
+        await clipboard.writeText(url);
+        alert("Link profilu skopírovaný.");
+        return;
+      }
+
+      const textarea = document.createElement("textarea");
+      textarea.value = url;
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+      alert("Link profilu skopírovaný.");
+    } catch (err: any) {
+      if (err?.name !== "AbortError") console.error("Share failed:", err);
+    } finally {
+      setShareBusy(false);
+    }
+  }, [shareBusy, trainer]);
+
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-emerald-500">Načítavam profil...</div>;
   if (!trainer) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Profil sa nenašiel.</div>;
 
@@ -286,6 +327,15 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           onTouchCancel={onTouchCancel}
         >
           <Image src="/simplelogo.png" alt="" width={60} height={60} className="absolute left-4 top-4 z-40" />
+          <button
+            type="button"
+            onClick={handleShare}
+            disabled={shareBusy}
+            className="absolute right-4 top-4 z-40 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center disabled:opacity-60"
+            aria-label="Zdieľať profil"
+          >
+            <Image src="/share%20icon.png" alt="" width={18} height={18} />
+          </button>
           {images.map((img, idx) => (
             <div 
               key={idx}
@@ -334,6 +384,15 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
       ) : (
         <div className="relative w-full aspect-[4/3] bg-zinc-900 flex items-center justify-center text-zinc-700 italic">
           <Image src="/simplelogo.png" alt="" width={60} height={60} className="absolute left-4 top-4 z-40" />
+          <button
+            type="button"
+            onClick={handleShare}
+            disabled={shareBusy}
+            className="absolute right-4 top-4 z-40 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center disabled:opacity-60"
+            aria-label="Zdieľať profil"
+          >
+            <Image src="/share%20icon.png" alt="" width={18} height={18} />
+          </button>
           Žiadne profilové fotky
         </div>
       )}
