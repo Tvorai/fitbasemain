@@ -150,7 +150,7 @@ const AvailableSlots: React.FC<AvailableSlotsProps> = ({
   });
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="space-y-2">
         <p className="text-sm text-zinc-300 font-semibold">Vyberte si deň a čas</p>
         <p className="text-xs text-zinc-500 font-bold tracking-widest uppercase">
@@ -178,21 +178,23 @@ const AvailableSlots: React.FC<AvailableSlotsProps> = ({
         })}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {activeSlots.map((slot) => (
-          <SlotCard
-            key={slot.source_availability_slot_id + slot.starts_at}
-            slot={slot}
-            isSelected={selectedSlot?.starts_at === slot.starts_at}
-            onSelect={handleSlotSelect}
-          />
-        ))}
-      </div>
-      {activeSlots.length === 0 && (
-        <div className="text-center py-6 text-zinc-500">
-          Pre tento deň nie sú dostupné žiadne termíny.
+      <div className="max-h-[52vh] overflow-y-auto pr-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {activeSlots.map((slot) => (
+            <SlotCard
+              key={slot.source_availability_slot_id + slot.starts_at}
+              slot={slot}
+              isSelected={selectedSlot?.starts_at === slot.starts_at}
+              onSelect={handleSlotSelect}
+            />
+          ))}
         </div>
-      )}
+        {activeSlots.length === 0 && (
+          <div className="text-center py-6 text-zinc-500">
+            Pre tento deň nie sú dostupné žiadne termíny.
+          </div>
+        )}
+      </div>
       
       {selectedSlot && (
         <div className="mt-2 text-center animate-in fade-in slide-in-from-bottom-2 duration-300">
