@@ -7,6 +7,7 @@ import { Modal } from "@/components/Modal";
 import AvailableSlots from "@/components/booking/AvailableSlots";
 import BookingForm from "@/components/booking/BookingForm";
 import { AvailableSlot } from "@/lib/booking/getAvailableSlots";
+import MealPlanRequestForm from "@/components/meal-plan/MealPlanRequestForm";
 
 type ServiceKey = "personal_training" | "online_consultation" | "meal_plan" | "brands";
 type ServicesVisibility = Record<ServiceKey, boolean>;
@@ -131,6 +132,31 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
       note: typeof form.note === "string" ? form.note : "",
     });
     setIsPersonalTrainingModalOpen(true);
+  }, [trainer]);
+
+  useEffect(() => {
+    if (!trainer) return;
+    if (typeof window === "undefined") return;
+
+    const raw = sessionStorage.getItem("fitbase_pending_meal_plan_request");
+    if (!raw) return;
+
+    const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
+
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      sessionStorage.removeItem("fitbase_pending_meal_plan_request");
+      return;
+    }
+
+    if (!isRecord(parsed)) return;
+    const pendingTrainerId = parsed.trainer_id;
+    if (typeof pendingTrainerId !== "string") return;
+    if (pendingTrainerId !== trainer.id) return;
+
+    setIsMealPlanModalOpen(true);
   }, [trainer]);
 
   // Ak sú polia prázdne, v UI ich skryjeme
@@ -620,7 +646,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
         onClose={() => setIsMealPlanModalOpen(false)}
         title="Objednať jedálniček"
       >
-        <p>Tu bude obsah pre jedálniček.</p>
+        {trainer ? <MealPlanRequestForm trainerId={trainer.id} /> : null}
       </Modal>
 
       <Modal
