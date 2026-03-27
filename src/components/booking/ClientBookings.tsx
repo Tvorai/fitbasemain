@@ -365,7 +365,7 @@ export default function ClientBookings({ userId, userEmail }: ClientBookingsProp
 
                     {booking.trainerSlug ? (
                       <a
-                        href={`/${booking.trainerSlug}`}
+                        href={`/${booking.trainerSlug}?openBooking=1`}
                         className="px-4 py-2 rounded-full bg-emerald-500 text-black hover:bg-emerald-400 transition-colors text-xs font-bold uppercase tracking-wider"
                       >
                         Ďalší tréning

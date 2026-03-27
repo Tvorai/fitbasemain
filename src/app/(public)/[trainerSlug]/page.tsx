@@ -89,6 +89,18 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
   useEffect(() => {
     if (!trainer) return;
     if (typeof window === "undefined") return;
+    try {
+      const url = new URL(window.location.href);
+      const shouldOpen = url.searchParams.get("openBooking");
+      if (shouldOpen) {
+        setIsPersonalTrainingModalOpen(true);
+      }
+    } catch {}
+  }, [trainer]);
+
+  useEffect(() => {
+    if (!trainer) return;
+    if (typeof window === "undefined") return;
 
     const raw = sessionStorage.getItem("fitbase_pending_booking");
     if (!raw) return;
