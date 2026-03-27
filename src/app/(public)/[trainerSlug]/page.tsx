@@ -22,6 +22,7 @@ type TrainerProfile = {
   brands: any[] | null;
   services: unknown;
   reviews?: unknown;
+  client_results?: unknown;
   profiles: {
     full_name: string | null;
     email?: string | null;
@@ -34,6 +35,15 @@ type TrainerReview = {
   rating: number;
   comment: string;
   photo_url: string | null;
+  created_at: string;
+};
+
+type ClientResult = {
+  id: string;
+  before_image_url: string;
+  after_image_url: string;
+  client_name: string | null;
+  note: string | null;
   created_at: string;
 };
 
@@ -190,6 +200,36 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
         ];
       })
     : [];
+
+  const clientResults: ClientResult[] = Array.isArray(trainer?.client_results)
+    ? (trainer?.client_results as unknown[]).flatMap((item): ClientResult[] => {
+        if (!item || typeof item !== "object") return [];
+        const anyItem = item as Record<string, unknown>;
+        const id = anyItem.id;
+        const before = anyItem.before_image_url;
+        const after = anyItem.after_image_url;
+        const clientName = anyItem.client_name;
+        const note = anyItem.note;
+        const createdAt = anyItem.created_at;
+
+        if (typeof id !== "string") return [];
+        if (typeof before !== "string") return [];
+        if (typeof after !== "string") return [];
+        if (typeof createdAt !== "string") return [];
+
+        return [
+          {
+            id,
+            before_image_url: before,
+            after_image_url: after,
+            client_name: typeof clientName === "string" ? clientName : null,
+            note: typeof note === "string" ? note : null,
+            created_at: createdAt,
+          },
+        ];
+      })
+    : [];
+
   const results: string[] = [];
   const defaultServices: ServicesVisibility = {
     personal_training: true,
@@ -571,19 +611,35 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           </div>
         )}
 
-        {results.length > 0 && (
+        {clientResults.length > 0 && (
           <div className="mt-12">
             <h2 className="text-3xl font-bold text-center mb-6 font-display uppercase tracking-wider">Výsledky klientov</h2>
-            <div className="grid grid-cols-2 gap-1 rounded-2xl overflow-hidden shadow-xl">
-              {results.map((url, i) => (
-                <div key={i} className="relative aspect-square">
-                  <Image src={url} alt={`Result ${i}`} fill className="object-cover" />
+            <div className="space-y-6">
+              {clientResults.map((result) => (
+                <div key={result.id} className="bg-zinc-900/30 border border-emerald-500/30 rounded-[25px] p-4 backdrop-blur-sm overflow-hidden">
+                  <div className="flex gap-2 aspect-[4/3] mb-4">
+                    <div className="relative flex-1 rounded-2xl overflow-hidden border border-zinc-800">
+                      <Image src={result.before_image_url} alt="Pred" fill className="object-cover" />
+                      <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-[10px] uppercase font-bold text-white tracking-widest">
+                        Pred
+                      </div>
+                    </div>
+                    <div className="relative flex-1 rounded-2xl overflow-hidden border border-emerald-500/30">
+                      <Image src={result.after_image_url} alt="Po" fill className="object-cover" />
+                      <div className="absolute bottom-2 right-2 bg-emerald-500/80 backdrop-blur-md px-2 py-0.5 rounded text-[10px] uppercase font-bold text-black tracking-widest">
+                        Po
+                      </div>
+                    </div>
+                  </div>
+                  {(result.client_name || result.note) && (
+                    <div className="px-2">
+                      {result.client_name && <div className="text-white font-bold">{result.client_name}</div>}
+                      {result.note && <div className="text-zinc-400 text-sm italic mt-1 leading-relaxed">&quot;{result.note}&quot;</div>}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-            <button className="w-full text-center text-[10px] text-zinc-500 mt-4 hover:text-zinc-300 transition-colors uppercase tracking-widest font-bold">
-              + Všetky výsledky
-            </button>
           </div>
         )}
       </div>

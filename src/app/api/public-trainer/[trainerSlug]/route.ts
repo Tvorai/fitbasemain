@@ -136,5 +136,13 @@ export async function GET(
     });
   }
 
-  return NextResponse.json({ ok: true, trainer: { ...data, reviews } }, { headers: noStoreHeaders });
+  const resultsRes = await supabase
+    .from("client_results")
+    .select("id, before_image_url, after_image_url, client_name, note, created_at")
+    .eq("trainer_id", (data as { id: string }).id)
+    .order("created_at", { ascending: false });
+
+  const client_results = resultsRes.data || [];
+
+  return NextResponse.json({ ok: true, trainer: { ...data, reviews, client_results } }, { headers: noStoreHeaders });
 }
