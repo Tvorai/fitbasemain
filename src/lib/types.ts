@@ -19,8 +19,7 @@ export type Slot = {
 };
 
 // Nové typy pre statusy rezervácie a platby (upravené podľa existujúcej DB schémy bookings)
-// TODO: "pending_payment" pridať do DB enum v budúcej fáze platieb
-export type BookingStatus = "pending" | "confirmed" | "cancelled" | "pending_payment";
+export type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
 export type PaymentStatus = "unpaid" | "paid" | "failed" | "refunded";
 
 export type Booking = {

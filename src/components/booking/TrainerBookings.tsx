@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseUrl, supabaseAnonKey } from "@/lib/config";
+import { BookingStatus } from "@/lib/types";
+import { sendBookingFollowUpEmailAction } from "@/lib/booking/actions";
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -18,11 +20,17 @@ type TrainerBookingItem = {
   clientNote: string | null;
   startsAt: string;
   endsAt: string;
-  status: string;
+  status: BookingStatus;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+const bookingStatuses: readonly BookingStatus[] = ["pending", "confirmed", "completed", "cancelled"];
+
+function isBookingStatus(value: unknown): value is BookingStatus {
+  return typeof value === "string" && (bookingStatuses as readonly string[]).includes(value);
 }
 
 function toTrainerBookingItem(value: unknown): TrainerBookingItem | null {
@@ -31,7 +39,7 @@ function toTrainerBookingItem(value: unknown): TrainerBookingItem | null {
   const startsAt = value.starts_at;
   const endsAt = value.ends_at;
   const status = value.booking_status;
-  if (typeof id !== "string" || typeof startsAt !== "string" || typeof endsAt !== "string" || typeof status !== "string") {
+  if (typeof id !== "string" || typeof startsAt !== "string" || typeof endsAt !== "string" || !isBookingStatus(status)) {
     return null;
   }
 
@@ -56,32 +64,67 @@ export default function TrainerBookings({ trainerId }: TrainerBookingsProps) {
   const [bookings, setBookings] = useState<TrainerBookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchBookings() {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("bookings")
-          .select("id, starts_at, ends_at, booking_status, client_name, client_email, client_phone, client_note")
-          .eq("trainer_id", trainerId)
-          .order("starts_at", { ascending: true });
+  const fetchBookings = useCallback(async () => {
+    if (!trainerId) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("id, starts_at, ends_at, booking_status, client_name, client_email, client_phone, client_note")
+        .eq("trainer_id", trainerId)
+        .order("starts_at", { ascending: true });
 
-        if (error) throw error;
-        const payload: unknown = data;
-        const mapped = Array.isArray(payload) ? payload.map(toTrainerBookingItem).filter((x): x is TrainerBookingItem => x !== null) : [];
-        setBookings(mapped);
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "Nepodarilo sa načítať rezervácie.");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    if (trainerId) {
-      fetchBookings();
+      if (error) throw error;
+      const payload: unknown = data;
+      const mapped = Array.isArray(payload) ? payload.map(toTrainerBookingItem).filter((x): x is TrainerBookingItem => x !== null) : [];
+      setBookings(mapped);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Nepodarilo sa načítať rezervácie.");
+    } finally {
+      setLoading(false);
     }
   }, [trainerId]);
+
+  useEffect(() => {
+    void fetchBookings();
+  }, [fetchBookings]);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    const onPointerDown = () => setOpenMenuId(null);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [openMenuId]);
+
+  const updateBookingStatus = useCallback(
+    async (bookingId: string, status: BookingStatus) => {
+      setError(null);
+      setUpdatingId(bookingId);
+      try {
+        const { error } = await supabase.from("bookings").update({ booking_status: status }).eq("id", bookingId);
+        if (error) throw error;
+
+        if (status === "completed") {
+          const sessionRes = await supabase.auth.getSession();
+          const accessToken = sessionRes.data.session?.access_token;
+          if (accessToken) {
+            await sendBookingFollowUpEmailAction({ booking_id: bookingId, access_token: accessToken });
+          }
+        }
+
+        await fetchBookings();
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Nepodarilo sa aktualizovať status rezervácie.");
+      } finally {
+        setUpdatingId(null);
+        setOpenMenuId(null);
+      }
+    },
+    [fetchBookings]
+  );
 
   if (loading) return <div className="text-zinc-500 animate-pulse">Načítavam rezervácie...</div>;
   if (error) return <div className="text-red-400">Chyba: {error}</div>;
@@ -97,6 +140,7 @@ export default function TrainerBookings({ trainerId }: TrainerBookingsProps) {
                 <th className="px-6 py-4">Termín</th>
                 <th className="px-6 py-4">Kontakt</th>
                 <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
@@ -122,10 +166,66 @@ export default function TrainerBookings({ trainerId }: TrainerBookingsProps) {
                     <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
                       booking.status === "confirmed" ? "bg-emerald-500/20 text-emerald-500" :
                       booking.status === "pending" ? "bg-yellow-500/20 text-yellow-500" :
+                      booking.status === "completed" ? "bg-sky-500/20 text-sky-400" :
+                      booking.status === "cancelled" ? "bg-red-500/20 text-red-400" :
                       "bg-zinc-700/50 text-zinc-400"
                     }`}>
                       {booking.status}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="relative inline-block" onPointerDown={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800/60 border border-white/5 disabled:opacity-50 disabled:hover:bg-transparent"
+                        aria-label="Akcie"
+                        disabled={updatingId === booking.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuId((prev) => (prev === booking.id ? null : booking.id));
+                        }}
+                      >
+                        ⋮
+                      </button>
+
+                      {openMenuId === booking.id && (
+                        <div className="absolute right-0 mt-2 w-56 rounded-xl border border-zinc-700/60 bg-zinc-950 shadow-lg overflow-hidden z-50">
+                          <div className="py-1">
+                            {booking.status !== "cancelled" && booking.status !== "completed" && (
+                              <button
+                                type="button"
+                                className="w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800/70 disabled:opacity-50"
+                                disabled={updatingId === booking.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void updateBookingStatus(booking.id, "completed");
+                                }}
+                              >
+                                Tréning bol dokončený
+                              </button>
+                            )}
+
+                            {booking.status !== "cancelled" && (
+                              <button
+                                type="button"
+                                className="w-full text-left px-3 py-2 text-sm text-red-300 hover:bg-zinc-800/70 disabled:opacity-50"
+                                disabled={updatingId === booking.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void updateBookingStatus(booking.id, "cancelled");
+                                }}
+                              >
+                                Zrušiť tréning
+                              </button>
+                            )}
+
+                            {booking.status === "cancelled" && (
+                              <div className="px-3 py-2 text-sm text-zinc-500">Žiadne akcie</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -170,8 +170,7 @@ export async function getAvailableSlots(
 
   console.log(`[getAvailableSlots] Načítanie bookings...`);
   // 2. Načítanie existujúcich aktívnych rezervácií v danom časovom rozsahu
-  // POZNÁMKA: "pending_payment" je momentálne vynechaný, pretože DB enum ho ešte neobsahuje
-  const activeBookingStatuses: BookingStatus[] = ["confirmed", "pending"];
+  const activeBookingStatuses: BookingStatus[] = ["pending", "confirmed"];
   const { data: bookings, error: bookingsError } = await supabase
     .from("bookings")
     .select("starts_at, ends_at")
