@@ -40,6 +40,7 @@ export default function TrainerMealPlanRequests({ trainerId }: TrainerMealPlanRe
         .from("meal_plan_requests")
         .select("*")
         .eq("trainer_id", trainerId)
+        .not("status", "in", '("completed","cancelled")')
         .order("created_at", { ascending: false });
 
       if (error) throw error;

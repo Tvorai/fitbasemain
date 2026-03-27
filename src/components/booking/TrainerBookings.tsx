@@ -6,6 +6,7 @@ import { supabaseUrl, supabaseAnonKey } from "@/lib/config";
 import { BookingStatus } from "@/lib/types";
 import { sendBookingFollowUpEmailAction, updateBookingStatusAction } from "@/lib/booking/actions";
 import TrainerMealPlanRequests from "../trainer/TrainerMealPlanRequests";
+import TrainerHistory from "../trainer/TrainerHistory";
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -13,7 +14,7 @@ interface TrainerBookingsProps {
   trainerId: string;
 }
 
-type BookingCategory = "personal_training" | "online_consultation" | "meal_plan";
+type BookingCategory = "personal_training" | "online_consultation" | "meal_plan" | "history";
 
 type TrainerBookingItem = {
   id: string;
@@ -93,6 +94,7 @@ export default function TrainerBookings({ trainerId }: TrainerBookingsProps) {
         .from("bookings")
         .select("id, starts_at, ends_at, booking_status, client_name, client_email, client_phone, client_note, service_id")
         .eq("trainer_id", trainerId)
+        .not("booking_status", "in", '("completed","cancelled")')
         .order("starts_at", { ascending: true });
 
       if (error) throw error;
@@ -232,10 +234,21 @@ export default function TrainerBookings({ trainerId }: TrainerBookingsProps) {
         >
           Jedálniček na mieru
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveCategory("history")}
+          className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${
+            activeCategory === "history" ? "bg-emerald-500 text-black" : "text-zinc-300 hover:text-white"
+          }`}
+        >
+          História
+        </button>
       </div>
 
       {activeCategory === "meal_plan" ? (
         <TrainerMealPlanRequests trainerId={trainerId} />
+      ) : activeCategory === "history" ? (
+        <TrainerHistory trainerId={trainerId} />
       ) : bookings.length > 0 ? (
         <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/50">
           {filteredBookings.length > 0 ? (
