@@ -570,13 +570,24 @@ export async function listPublicTrainerReviewsAction(
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const res = await supabase
-    .from("reviews")
-    .select("id, client_profile_id, rating, title, body, is_public, created_at, photo_url")
-    .eq("trainer_id", trainer_id)
-    .eq("is_public", true)
-    .order("created_at", { ascending: false })
-    .limit(limit ?? 20);
+  const fetchReviews = (select: string) => {
+    return supabase
+      .from("reviews")
+      .select(select)
+      .eq("trainer_id", trainer_id)
+      .eq("is_public", true)
+      .order("created_at", { ascending: false })
+      .limit(limit ?? 20);
+  };
+
+  let res = await fetchReviews("id, client_profile_id, rating, title, body, is_public, created_at, photo_url");
+
+  if (res.error) {
+    const msg = res.error.message || "";
+    if (res.error.code === "42703" || msg.toLowerCase().includes("photo_url") || msg.toLowerCase().includes("column")) {
+      res = await fetchReviews("id, client_profile_id, rating, title, body, is_public, created_at");
+    }
+  }
 
   if (res.error) {
     return { status: "error", message: res.error.message };

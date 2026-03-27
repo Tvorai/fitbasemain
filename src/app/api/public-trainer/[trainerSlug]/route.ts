@@ -61,13 +61,24 @@ export async function GET(
   }
 
   let reviews: unknown[] = [];
-  const reviewsRes = await supabase
-    .from("reviews")
-    .select("id, client_profile_id, rating, body, created_at, is_public, photo_url")
-    .eq("trainer_id", (data as { id: string }).id)
-    .eq("is_public", true)
-    .order("created_at", { ascending: false })
-    .limit(20);
+  const fetchReviews = (select: string) => {
+    return supabase
+      .from("reviews")
+      .select(select)
+      .eq("trainer_id", (data as { id: string }).id)
+      .eq("is_public", true)
+      .order("created_at", { ascending: false })
+      .limit(20);
+  };
+
+  let reviewsRes = await fetchReviews("id, client_profile_id, rating, body, created_at, is_public, photo_url");
+
+  if (reviewsRes.error) {
+    const msg = reviewsRes.error.message || "";
+    if (reviewsRes.error.code === "42703" || msg.toLowerCase().includes("photo_url") || msg.toLowerCase().includes("column")) {
+      reviewsRes = await fetchReviews("id, client_profile_id, rating, body, created_at, is_public");
+    }
+  }
 
   if (!reviewsRes.error && Array.isArray(reviewsRes.data)) {
     const rows = reviewsRes.data as unknown[];
