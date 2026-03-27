@@ -31,6 +31,8 @@ export default function TrainerMealPlanRequests({ trainerId }: TrainerMealPlanRe
   const [requests, setRequests] = useState<MealPlanRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const fetchRequests = useCallback(async () => {
     if (!trainerId) return;
@@ -56,6 +58,29 @@ export default function TrainerMealPlanRequests({ trainerId }: TrainerMealPlanRe
     void fetchRequests();
   }, [fetchRequests]);
 
+  const updateMealPlanStatus = useCallback(
+    async (id: string, status: string) => {
+      setError(null);
+      setUpdatingId(id);
+      try {
+        const { error } = await supabase
+          .from("meal_plan_requests")
+          .update({ status })
+          .eq("id", id);
+
+        if (error) throw error;
+        await fetchRequests();
+      } catch (err: unknown) {
+        console.error("[TrainerMealPlanRequests] update error:", err);
+        setError(err instanceof Error ? err.message : "Nepodarilo sa aktualizovať status požiadavky.");
+      } finally {
+        setUpdatingId(null);
+        setOpenMenuId(null);
+      }
+    },
+    [fetchRequests]
+  );
+
   if (loading) return <div className="text-zinc-500 animate-pulse">Načítavam požiadavky...</div>;
   if (error) return <div className="text-red-400">Chyba: {error}</div>;
 
@@ -65,6 +90,13 @@ export default function TrainerMealPlanRequests({ trainerId }: TrainerMealPlanRe
 
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/50">
+      {openMenuId !== null && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setOpenMenuId(null)}
+          onPointerDown={() => setOpenMenuId(null)}
+        />
+      )}
       <table className="w-full text-left text-sm">
         <thead className="bg-zinc-800/80 text-zinc-400 font-bold uppercase tracking-wider text-[10px]">
           <tr>
@@ -73,6 +105,7 @@ export default function TrainerMealPlanRequests({ trainerId }: TrainerMealPlanRe
             <th className="px-6 py-4">Preferencie</th>
             <th className="px-6 py-4">Status</th>
             <th className="px-6 py-4">Dátum</th>
+            <th className="px-6 py-4 text-right"></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-800">
@@ -107,15 +140,63 @@ export default function TrainerMealPlanRequests({ trainerId }: TrainerMealPlanRe
               <td className="px-6 py-4">
                 <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
                   request.status === "new" ? "bg-yellow-500/20 text-yellow-500" :
-                  request.status === "in_progress" ? "bg-sky-500/20 text-sky-400" :
+                  request.status === "in_progress" ? "bg-orange-500/20 text-orange-400" :
                   request.status === "completed" ? "bg-emerald-500/20 text-emerald-500" :
                   "bg-zinc-700/50 text-zinc-400"
                 }`}>
-                  {request.status === "new" ? "Nová" : request.status}
+                  {request.status === "new" ? "Nová" : request.status === "in_progress" ? "V procese" : request.status}
                 </span>
               </td>
               <td className="px-6 py-4 text-zinc-500 text-xs">
                 {new Date(request.created_at).toLocaleDateString("sk-SK")}
+              </td>
+              <td className="px-6 py-4 text-right">
+                <div className="relative inline-block" onPointerDown={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-800/60 border border-white/5 disabled:opacity-50 disabled:hover:bg-transparent"
+                    aria-label="Akcie"
+                    disabled={updatingId === request.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMenuId((prev) => (prev === request.id ? null : request.id));
+                    }}
+                  >
+                    ⋮
+                  </button>
+
+                  {openMenuId === request.id && (
+                    <div className="absolute right-0 mt-2 w-48 rounded-xl border border-zinc-700/60 bg-zinc-950 shadow-lg overflow-hidden z-50">
+                      <div className="py-1">
+                        {request.status !== "in_progress" && (
+                          <button
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800/70 disabled:opacity-50"
+                            disabled={updatingId === request.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void updateMealPlanStatus(request.id, "in_progress");
+                            }}
+                          >
+                            V procese
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm text-emerald-400 hover:bg-zinc-800/70 disabled:opacity-50"
+                          disabled={updatingId === request.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void updateMealPlanStatus(request.id, "completed");
+                          }}
+                        >
+                          Dokončené
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </td>
             </tr>
           ))}
