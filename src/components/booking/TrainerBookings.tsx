@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseUrl, supabaseAnonKey } from "@/lib/config";
 import { BookingStatus } from "@/lib/types";
-import { sendBookingFollowUpEmailAction } from "@/lib/booking/actions";
+import { sendBookingFollowUpEmailAction, updateBookingStatusAction } from "@/lib/booking/actions";
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -104,15 +104,24 @@ export default function TrainerBookings({ trainerId }: TrainerBookingsProps) {
       setError(null);
       setUpdatingId(bookingId);
       try {
-        const { error } = await supabase.from("bookings").update({ booking_status: status }).eq("id", bookingId);
-        if (error) throw error;
+        const sessionRes = await supabase.auth.getSession();
+        const accessToken = sessionRes.data.session?.access_token;
+        if (!accessToken) {
+          throw new Error("Pre túto akciu sa musíte prihlásiť.");
+        }
+
+        const updateRes = await updateBookingStatusAction({
+          booking_id: bookingId,
+          booking_status: status,
+          access_token: accessToken,
+        });
+
+        if (updateRes.status !== "success") {
+          throw new Error(updateRes.message);
+        }
 
         if (status === "completed") {
-          const sessionRes = await supabase.auth.getSession();
-          const accessToken = sessionRes.data.session?.access_token;
-          if (accessToken) {
-            await sendBookingFollowUpEmailAction({ booking_id: bookingId, access_token: accessToken });
-          }
+          await sendBookingFollowUpEmailAction({ booking_id: bookingId, access_token: accessToken });
         }
 
         await fetchBookings();

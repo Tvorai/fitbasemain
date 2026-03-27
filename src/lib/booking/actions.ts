@@ -231,6 +231,78 @@ type FollowUpEmailState =
   | { status: "success"; message: string }
   | { status: "error"; message: string };
 
+const updateBookingStatusSchema = z.object({
+  booking_id: z.string().uuid(),
+  booking_status: z.enum(["pending", "confirmed", "completed", "cancelled"]),
+  access_token: z.string().min(1),
+});
+
+type UpdateBookingStatusState =
+  | { status: "success"; message: string }
+  | { status: "error"; message: string };
+
+export async function updateBookingStatusAction(
+  input: z.infer<typeof updateBookingStatusSchema>
+): Promise<UpdateBookingStatusState> {
+  const parsed = updateBookingStatusSchema.safeParse(input);
+  if (!parsed.success) {
+    return { status: "error", message: "Neplatné údaje." };
+  }
+
+  const { booking_id, booking_status, access_token } = parsed.data;
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    return { status: "error", message: "Chýba konfigurácia servera." };
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  try {
+    const userResult = await supabase.auth.getUser(access_token);
+    const authUser = userResult.data.user;
+    if (!authUser) {
+      return { status: "error", message: "Neautorizované." };
+    }
+
+    const trainerRes = await supabase
+      .from("trainers")
+      .select("id")
+      .eq("profile_id", authUser.id)
+      .maybeSingle<{ id: string }>();
+
+    if (trainerRes.error) {
+      return { status: "error", message: "Nepodarilo sa overiť trénera." };
+    }
+    if (!trainerRes.data?.id) {
+      return { status: "error", message: "Používateľ nie je tréner." };
+    }
+
+    const updateRes = await supabase
+      .from("bookings")
+      .update({ booking_status: booking_status as BookingStatus })
+      .eq("id", booking_id)
+      .eq("trainer_id", trainerRes.data.id)
+      .select("id")
+      .maybeSingle<{ id: string }>();
+
+    if (updateRes.error) {
+      return { status: "error", message: updateRes.error.message };
+    }
+    if (!updateRes.data?.id) {
+      return { status: "error", message: "Rezerváciu sa nepodarilo aktualizovať." };
+    }
+
+    return { status: "success", message: "Status bol aktualizovaný." };
+  } catch (error: unknown) {
+    console.error("updateBookingStatusAction error:", error);
+    return { status: "error", message: getErrorMessage(error) };
+  }
+}
+
 export async function sendBookingFollowUpEmailAction(
   input: z.infer<typeof followUpEmailSchema>
 ): Promise<FollowUpEmailState> {
