@@ -401,3 +401,236 @@ export async function sendBookingFollowUpEmailAction(
     return { status: "error", message: getErrorMessage(error) };
   }
 }
+
+const createTrainerReviewSchema = z.object({
+  booking_id: z.string().uuid(),
+  trainer_id: z.string().uuid(),
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().trim().min(1).max(2000),
+  photo_url: z.string().trim().min(1).max(400000).optional().nullable(),
+  access_token: z.string().min(1),
+});
+
+type CreateTrainerReviewState =
+  | { status: "success"; message: string }
+  | { status: "error"; message: string };
+
+export async function createTrainerReviewAction(
+  input: z.infer<typeof createTrainerReviewSchema>
+): Promise<CreateTrainerReviewState> {
+  const parsed = createTrainerReviewSchema.safeParse(input);
+  if (!parsed.success) {
+    return { status: "error", message: "Neplatné údaje." };
+  }
+
+  const { booking_id, trainer_id, rating, comment, photo_url, access_token } = parsed.data;
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    return { status: "error", message: "Chýba konfigurácia servera." };
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  try {
+    const userResult = await supabase.auth.getUser(access_token);
+    const authUser = userResult.data.user;
+    if (!authUser) {
+      return { status: "error", message: "Neautorizované." };
+    }
+
+    const bookingRes = await supabase
+      .from("bookings")
+      .select("id, trainer_id, client_profile_id, booking_status")
+      .eq("id", booking_id)
+      .maybeSingle<{
+        id: string;
+        trainer_id: string;
+        client_profile_id: string | null;
+        booking_status: string;
+      }>();
+
+    if (bookingRes.error) {
+      return { status: "error", message: "Nepodarilo sa načítať rezerváciu." };
+    }
+    if (!bookingRes.data) {
+      return { status: "error", message: "Rezervácia neexistuje." };
+    }
+
+    if (bookingRes.data.trainer_id !== trainer_id) {
+      return { status: "error", message: "Rezervácia nepatrí tomuto trénerovi." };
+    }
+    if (bookingRes.data.client_profile_id !== authUser.id) {
+      return { status: "error", message: "Nemáte oprávnenie." };
+    }
+    if (bookingRes.data.booking_status !== "completed") {
+      return { status: "error", message: "Recenziu je možné pridať až po dokončení tréningu." };
+    }
+
+    const profileRes = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", authUser.id)
+      .maybeSingle<{ full_name: string | null }>();
+
+    const clientName =
+      (profileRes.data?.full_name && profileRes.data.full_name.trim()) ||
+      authUser.email ||
+      "Klient";
+
+    const insertRes = await supabase
+      .from("trainer_reviews")
+      .insert({
+        trainer_id,
+        booking_id,
+        client_profile_id: authUser.id,
+        client_name: clientName,
+        rating,
+        comment,
+        photo_url: photo_url || null,
+      })
+      .select("id")
+      .maybeSingle<{ id: string }>();
+
+    if (insertRes.error) {
+      const code = insertRes.error.code;
+      if (code === "23505") {
+        return { status: "error", message: "Recenzia pre tento tréning už existuje." };
+      }
+      return { status: "error", message: insertRes.error.message };
+    }
+
+    return { status: "success", message: "Recenzia bola odoslaná." };
+  } catch (error: unknown) {
+    console.error("createTrainerReviewAction error:", error);
+    return { status: "error", message: getErrorMessage(error) };
+  }
+}
+
+const listPublicTrainerReviewsSchema = z.object({
+  trainer_id: z.string().uuid(),
+  limit: z.number().int().min(1).max(50).optional(),
+});
+
+type TrainerReviewItem = {
+  id: string;
+  client_name: string;
+  rating: number;
+  comment: string;
+  photo_url: string | null;
+  created_at: string;
+};
+
+type ListTrainerReviewsState =
+  | { status: "success"; reviews: TrainerReviewItem[] }
+  | { status: "error"; message: string };
+
+export async function listPublicTrainerReviewsAction(
+  input: z.infer<typeof listPublicTrainerReviewsSchema>
+): Promise<ListTrainerReviewsState> {
+  const parsed = listPublicTrainerReviewsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { status: "error", message: "Neplatné údaje." };
+  }
+
+  const { trainer_id, limit } = parsed.data;
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    return { status: "error", message: "Chýba konfigurácia servera." };
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const res = await supabase
+    .from("trainer_reviews")
+    .select("id, client_name, rating, comment, photo_url, created_at")
+    .eq("trainer_id", trainer_id)
+    .order("created_at", { ascending: false })
+    .limit(limit ?? 20);
+
+  if (res.error) {
+    return { status: "error", message: res.error.message };
+  }
+
+  const payload: unknown = res.data;
+  const rows = Array.isArray(payload) ? (payload as unknown[]) : [];
+  const reviews: TrainerReviewItem[] = [];
+
+  for (const item of rows) {
+    if (!item || typeof item !== "object") continue;
+    const anyItem = item as Record<string, unknown>;
+    const id = anyItem.id;
+    const clientName = anyItem.client_name;
+    const ratingValue = anyItem.rating;
+    const commentValue = anyItem.comment;
+    const photoUrl = anyItem.photo_url;
+    const createdAt = anyItem.created_at;
+    if (typeof id !== "string") continue;
+    if (typeof clientName !== "string") continue;
+    if (typeof ratingValue !== "number") continue;
+    if (typeof commentValue !== "string") continue;
+    if (!(typeof photoUrl === "string" || photoUrl === null)) continue;
+    if (typeof createdAt !== "string") continue;
+    reviews.push({
+      id,
+      client_name: clientName,
+      rating: ratingValue,
+      comment: commentValue,
+      photo_url: photoUrl,
+      created_at: createdAt,
+    });
+  }
+
+  return { status: "success", reviews };
+}
+
+const listTrainerReviewsForDashboardSchema = z.object({
+  access_token: z.string().min(1),
+  limit: z.number().int().min(1).max(100).optional(),
+});
+
+export async function listTrainerReviewsForDashboardAction(
+  input: z.infer<typeof listTrainerReviewsForDashboardSchema>
+): Promise<ListTrainerReviewsState> {
+  const parsed = listTrainerReviewsForDashboardSchema.safeParse(input);
+  if (!parsed.success) {
+    return { status: "error", message: "Neplatné údaje." };
+  }
+
+  const { access_token, limit } = parsed.data;
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    return { status: "error", message: "Chýba konfigurácia servera." };
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const userResult = await supabase.auth.getUser(access_token);
+  const authUser = userResult.data.user;
+  if (!authUser) {
+    return { status: "error", message: "Neautorizované." };
+  }
+
+  const trainerRes = await supabase
+    .from("trainers")
+    .select("id")
+    .eq("profile_id", authUser.id)
+    .maybeSingle<{ id: string }>();
+
+  if (trainerRes.error || !trainerRes.data?.id) {
+    return { status: "error", message: "Používateľ nie je tréner." };
+  }
+
+  return listPublicTrainerReviewsAction({ trainer_id: trainerRes.data.id, limit: limit ?? 50 });
+}

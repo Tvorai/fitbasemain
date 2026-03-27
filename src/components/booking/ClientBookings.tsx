@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseUrl, supabaseAnonKey } from "@/lib/config";
 import { BookingStatus } from "@/lib/types";
+import { Modal } from "@/components/Modal";
+import { createTrainerReviewAction } from "@/lib/booking/actions";
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -82,10 +84,65 @@ function toTrainerContact(value: unknown): { trainerId: string; contact: Trainer
   };
 }
 
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === "string") resolve(result);
+      else reject(new Error("Invalid file result"));
+    };
+    reader.onerror = () => reject(reader.error || new Error("File read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Image load failed"));
+    img.src = src;
+  });
+}
+
+async function resizeImageDataUrl(dataUrl: string, maxSize: number = 1024): Promise<string> {
+  const img = await loadImage(dataUrl);
+  const w = img.naturalWidth || img.width;
+  const h = img.naturalHeight || img.height;
+  if (!w || !h) return dataUrl;
+
+  const scale = Math.min(1, maxSize / Math.max(w, h));
+  const targetW = Math.max(1, Math.round(w * scale));
+  const targetH = Math.max(1, Math.round(h * scale));
+
+  if (targetW === w && targetH === h) return dataUrl;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = targetW;
+  canvas.height = targetH;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, targetW, targetH);
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
+
 export default function ClientBookings({ userId, userEmail }: ClientBookingsProps) {
   const [bookings, setBookings] = useState<ClientBookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewBooking, setReviewBooking] = useState<{
+    bookingId: string;
+    trainerId: string;
+    trainerName: string;
+  } | null>(null);
+  const [reviewRating, setReviewRating] = useState<number>(0);
+  const [reviewHover, setReviewHover] = useState<number>(0);
+  const [reviewText, setReviewText] = useState<string>("");
+  const [reviewPhotoUrl, setReviewPhotoUrl] = useState<string | null>(null);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchBookings() {
@@ -288,16 +345,20 @@ export default function ClientBookings({ userId, userEmail }: ClientBookingsProp
                   <div className="pt-3 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      disabled={!booking.trainerEmail}
                       onClick={() => {
-                        if (!booking.trainerEmail) return;
-                        const subject = encodeURIComponent("Recenzia - Fitbase");
-                        const body = encodeURIComponent(
-                          `Ahoj,\n\nchcem napísať recenziu na tréning dňa ${new Date(booking.startsAt).toLocaleDateString("sk-SK")}.\n\n`
-                        );
-                        window.location.href = `mailto:${booking.trainerEmail}?subject=${subject}&body=${body}`;
+                        setReviewBooking({
+                          bookingId: booking.id,
+                          trainerId: booking.trainerId,
+                          trainerName: booking.trainerName,
+                        });
+                        setReviewRating(0);
+                        setReviewHover(0);
+                        setReviewText("");
+                        setReviewPhotoUrl(null);
+                        setReviewError(null);
+                        setReviewOpen(true);
                       }}
-                      className="px-4 py-2 rounded-full border border-emerald-500/60 text-emerald-300 hover:border-emerald-400 hover:text-emerald-200 transition-colors text-xs font-bold uppercase tracking-wider disabled:opacity-50 disabled:hover:border-emerald-500/60"
+                      className="px-4 py-2 rounded-full border border-emerald-500/60 text-emerald-300 hover:border-emerald-400 hover:text-emerald-200 transition-colors text-xs font-bold uppercase tracking-wider"
                     >
                       Napísať recenziu
                     </button>
@@ -327,6 +388,121 @@ export default function ClientBookings({ userId, userEmail }: ClientBookingsProp
       ) : (
         <p className="text-zinc-500 italic text-center py-10">Zatiaľ ste si nezarezervovali žiadne služby.</p>
       )}
+
+      <Modal
+        isOpen={reviewOpen}
+        onClose={() => {
+          if (reviewSubmitting) return;
+          setReviewOpen(false);
+        }}
+        title={`Napísať recenziu na "${reviewBooking?.trainerName || "trénera"}"`}
+      >
+        <div className="space-y-4">
+          {reviewError && <div className="text-red-400 text-sm">{reviewError}</div>}
+
+          <div className="flex items-center gap-2">
+            {[1, 2, 3, 4, 5].map((n) => {
+              const active = (reviewHover || reviewRating) >= n;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  onMouseEnter={() => setReviewHover(n)}
+                  onMouseLeave={() => setReviewHover(0)}
+                  onClick={() => setReviewRating(n)}
+                  disabled={reviewSubmitting}
+                  className="p-1 disabled:opacity-50"
+                  aria-label={`Hodnotenie ${n} z 5`}
+                >
+                  <svg
+                    viewBox="0 0 20 20"
+                    className={`w-7 h-7 ${active ? "fill-yellow-400" : "fill-transparent"} stroke-yellow-400`}
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                </button>
+              );
+            })}
+          </div>
+
+          <textarea
+            value={reviewText}
+            onChange={(e) => setReviewText(e.target.value)}
+            disabled={reviewSubmitting}
+            className="w-full bg-transparent border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none focus:ring-1 focus:ring-emerald-500 transition-all min-h-[120px]"
+            placeholder="Napíšte recenziu..."
+          />
+
+          <div className="space-y-2">
+            <input
+              type="file"
+              accept="image/*"
+              disabled={reviewSubmitting}
+              onChange={async (e) => {
+                const file = e.target.files?.[0] || null;
+                if (!file) return;
+                setReviewError(null);
+                try {
+                  const dataUrl = await fileToDataUrl(file);
+                  const resized = await resizeImageDataUrl(dataUrl, 1024);
+                  setReviewPhotoUrl(resized);
+                } catch (err: unknown) {
+                  setReviewError(err instanceof Error ? err.message : "Nepodarilo sa načítať fotku.");
+                }
+              }}
+              className="block w-full text-sm text-zinc-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700"
+            />
+
+            {reviewPhotoUrl && (
+              <div className="relative">
+                <img src={reviewPhotoUrl} alt="" className="w-full rounded-2xl border border-white/10" />
+                <button
+                  type="button"
+                  onClick={() => setReviewPhotoUrl(null)}
+                  disabled={reviewSubmitting}
+                  className="absolute top-2 right-2 px-3 py-1 rounded-full bg-black/60 text-white text-xs hover:bg-black/80 disabled:opacity-50"
+                >
+                  Odstrániť
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            disabled={reviewSubmitting || !reviewBooking || reviewRating === 0 || reviewText.trim().length === 0}
+            onClick={async () => {
+              if (!reviewBooking) return;
+              setReviewError(null);
+              setReviewSubmitting(true);
+              try {
+                const sessionRes = await supabase.auth.getSession();
+                const accessToken = sessionRes.data.session?.access_token;
+                if (!accessToken) throw new Error("Pre odoslanie recenzie sa musíte prihlásiť.");
+
+                const res = await createTrainerReviewAction({
+                  booking_id: reviewBooking.bookingId,
+                  trainer_id: reviewBooking.trainerId,
+                  rating: reviewRating,
+                  comment: reviewText,
+                  photo_url: reviewPhotoUrl,
+                  access_token: accessToken,
+                });
+
+                if (res.status !== "success") throw new Error(res.message);
+                setReviewOpen(false);
+              } catch (err: unknown) {
+                setReviewError(err instanceof Error ? err.message : "Nepodarilo sa odoslať recenziu.");
+              } finally {
+                setReviewSubmitting(false);
+              }
+            }}
+            className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 px-6 rounded-[16px] transition-colors uppercase tracking-wide disabled:opacity-50"
+          >
+            {reviewSubmitting ? "Odosielam..." : "Odoslať recenziu"}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

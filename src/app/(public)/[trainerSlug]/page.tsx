@@ -20,10 +20,20 @@ type TrainerProfile = {
   images: any[] | null;
   brands: any[] | null;
   services: unknown;
+  reviews?: unknown;
   profiles: {
     full_name: string | null;
     email?: string | null;
   } | null;
+};
+
+type TrainerReview = {
+  id: string;
+  client_name: string;
+  rating: number;
+  comment: string;
+  photo_url: string | null;
+  created_at: string;
 };
 
 export default function TrainerProfilePage({ params }: { params: { trainerSlug: string } }) {
@@ -115,7 +125,34 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
   const images: string[] = trainer?.images && Array.isArray(trainer.images)
     ? trainer.images.filter((img): img is string => img !== null)
     : [];
-  const reviews: any[] = [];   // Tu budú recenzie z DB (zatiaľ prázdne pre test skrytia)
+  const reviews: TrainerReview[] = Array.isArray(trainer?.reviews)
+    ? (trainer?.reviews as unknown[]).flatMap((item): TrainerReview[] => {
+        if (!item || typeof item !== "object") return [];
+        const anyItem = item as Record<string, unknown>;
+        const id = anyItem.id;
+        const clientName = anyItem.client_name;
+        const rating = anyItem.rating;
+        const comment = anyItem.comment;
+        const photoUrl = anyItem.photo_url;
+        const createdAt = anyItem.created_at;
+        if (typeof id !== "string") return [];
+        if (typeof clientName !== "string") return [];
+        if (typeof rating !== "number") return [];
+        if (typeof comment !== "string") return [];
+        if (!(typeof photoUrl === "string" || photoUrl === null)) return [];
+        if (typeof createdAt !== "string") return [];
+        return [
+          {
+            id,
+            client_name: clientName,
+            rating,
+            comment,
+            photo_url: photoUrl,
+            created_at: createdAt,
+          },
+        ];
+      })
+    : [];
   const results: string[] = []; // Tu budú výsledky z DB (zatiaľ prázdne pre test skrytia)
   const defaultServices: ServicesVisibility = {
     personal_training: true,
@@ -150,6 +187,9 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
     meal_plan: coerceBoolean(servicesMerged.meal_plan) ?? defaultServices.meal_plan,
     brands: coerceBoolean(servicesMerged.brands) ?? defaultServices.brands
   };
+
+  const avgRating = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
+  const avgRounded = Math.round(avgRating * 10) / 10;
 
   useEffect(() => {
     if (images.length === 0) {
@@ -413,10 +453,16 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
             <div className="flex items-center gap-2 mt-2">
               <div className="flex text-yellow-400">
                 {[...Array(5)].map((_, i) => (
-                  <svg key={i} className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                  <svg
+                    key={i}
+                    className={`w-4 h-4 ${i < Math.round(avgRating) ? "fill-current" : "fill-transparent"} stroke-current`}
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
                 ))}
               </div>
-              <span className="text-zinc-400 text-xs italic font-medium">{reviews.length} recenzií</span>
+              <span className="text-zinc-400 text-xs italic font-medium">{avgRounded} • {reviews.length} recenzií</span>
             </div>
           )}
         </div>
@@ -464,14 +510,25 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
             <div className="relative group">
               <div className="border border-emerald-500/50 rounded-[25px] p-6 bg-zinc-900/30 backdrop-blur-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="font-bold text-lg">{reviews[0].author}</span>
+                  <span className="font-bold text-lg">{reviews[0]?.client_name || "Klient"}</span>
                   <div className="flex text-yellow-400">
                     {[...Array(5)].map((_, i) => (
-                      <svg key={i} className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                      <svg
+                        key={i}
+                        className={`w-3 h-3 ${(reviews[0]?.rating || 0) > i ? "fill-current" : "fill-transparent"} stroke-current`}
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
                     ))}
                   </div>
                 </div>
-                <p className="text-zinc-300 italic text-sm leading-relaxed">&quot;{reviews[0].text}&quot;</p>
+                <p className="text-zinc-300 italic text-sm leading-relaxed">&quot;{reviews[0]?.comment || ""}&quot;</p>
+                {reviews[0]?.photo_url && (
+                  <div className="mt-4">
+                    <img src={reviews[0].photo_url} alt="" className="w-full rounded-2xl border border-white/10" />
+                  </div>
+                )}
               </div>
             </div>
             <button className="w-full text-center text-[10px] text-zinc-500 mt-4 hover:text-zinc-300 transition-colors uppercase tracking-widest font-bold">

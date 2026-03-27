@@ -60,5 +60,17 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ ok: true, trainer: data }, { headers: noStoreHeaders });
+  let reviews: unknown[] = [];
+  const reviewsRes = await supabase
+    .from("trainer_reviews")
+    .select("id, client_name, rating, comment, photo_url, created_at")
+    .eq("trainer_id", (data as { id: string }).id)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (!reviewsRes.error && Array.isArray(reviewsRes.data)) {
+    reviews = reviewsRes.data as unknown[];
+  }
+
+  return NextResponse.json({ ok: true, trainer: { ...data, reviews } }, { headers: noStoreHeaders });
 }

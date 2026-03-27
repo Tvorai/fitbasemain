@@ -7,6 +7,7 @@ import { supabaseUrl, supabaseAnonKey } from "@/lib/config";
 import TrainerCalendar from "@/components/trainer/TrainerCalendar";
 import CalendarSettings from "@/components/trainer/CalendarSettings";
 import TrainerBookings from "@/components/booking/TrainerBookings";
+import { listTrainerReviewsForDashboardAction } from "@/lib/booking/actions";
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -350,6 +351,96 @@ export default function TrainerDashboardPage() {
     });
   };
 
+  type TrainerReviewItem = {
+    id: string;
+    client_name: string;
+    rating: number;
+    comment: string;
+    photo_url: string | null;
+    created_at: string;
+  };
+
+  function TrainerReviewsTab() {
+    const [reviews, setReviews] = useState<TrainerReviewItem[]>([]);
+    const [loadingReviews, setLoadingReviews] = useState(true);
+    const [reviewsError, setReviewsError] = useState<string | null>(null);
+
+    useEffect(() => {
+      let cancelled = false;
+
+      async function load() {
+        setLoadingReviews(true);
+        setReviewsError(null);
+        try {
+          const sessionRes = await supabase.auth.getSession();
+          const accessToken = sessionRes.data.session?.access_token;
+          if (!accessToken) {
+            throw new Error("Pre zobrazenie recenzií sa musíte prihlásiť.");
+          }
+
+          const res = await listTrainerReviewsForDashboardAction({ access_token: accessToken });
+          if (res.status !== "success") {
+            throw new Error(res.message);
+          }
+
+          if (!cancelled) setReviews(res.reviews as TrainerReviewItem[]);
+        } catch (err: unknown) {
+          if (!cancelled) setReviewsError(err instanceof Error ? err.message : "Nepodarilo sa načítať recenzie.");
+        } finally {
+          if (!cancelled) setLoadingReviews(false);
+        }
+      }
+
+      void load();
+      return () => {
+        cancelled = true;
+      };
+    }, []);
+
+    if (loadingReviews) return <div className="text-zinc-500 animate-pulse">Načítavam recenzie...</div>;
+    if (reviewsError) return <div className="text-red-400">Chyba: {reviewsError}</div>;
+
+    if (reviews.length === 0) {
+      return <div className="text-zinc-500 italic">Zatiaľ nemáte žiadne recenzie.</div>;
+    }
+
+    return (
+      <div className="space-y-4">
+        {reviews.map((r) => (
+          <div key={r.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-white font-bold">{r.client_name}</div>
+                <div className="text-zinc-500 text-xs">
+                  {new Date(r.created_at).toLocaleDateString("sk-SK")}
+                </div>
+              </div>
+              <div className="flex text-yellow-400">
+                {[...Array(5)].map((_, i) => (
+                  <svg
+                    key={i}
+                    viewBox="0 0 20 20"
+                    className={`w-4 h-4 ${r.rating > i ? "fill-current" : "fill-transparent"} stroke-current`}
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-3 text-zinc-200 text-sm whitespace-pre-wrap">{r.comment}</div>
+
+            {r.photo_url && (
+              <div className="mt-4">
+                <img src={r.photo_url} alt="" className="w-full rounded-2xl border border-white/10" />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   const renderTabContent = () => {
     if (loading) return <div className="flex items-center justify-center h-full text-zinc-500">Načítavam...</div>;
 
@@ -502,6 +593,14 @@ export default function TrainerDashboardPage() {
           <div className="flex flex-col gap-6 w-full max-w-[760px] ml-auto">
             <h2 className="text-4xl font-display uppercase tracking-wider mb-4">Moje rezervácie</h2>
             <TrainerBookings trainerId={trainerId} />
+          </div>
+        );
+
+      case "recenzie":
+        return (
+          <div className="flex flex-col gap-6 w-full max-w-[760px] ml-auto">
+            <h2 className="text-4xl font-display uppercase tracking-wider mb-4">Recenzie</h2>
+            <TrainerReviewsTab />
           </div>
         );
 
