@@ -38,6 +38,7 @@ export default function ClientResultsGallery({ trainerId }: ClientResultsGallery
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+      console.log("[ClientResultsGallery] fetched data:", data);
       setResults(data || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Nepodarilo sa načítať galériu výsledkov.");

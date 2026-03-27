@@ -38,7 +38,17 @@ const config = {
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === "production"
-  }
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "xjdrjyfbookmabcycljo.supabase.co",
+        port: "",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
 };
 
 export default config;
