@@ -19,6 +19,7 @@ export default function UserAccountPage() {
   const [userId, setUserId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const vantaElRef = useRef<HTMLDivElement | null>(null);
   const vantaEffectRef = useRef<any>(null);
   const [threeReady, setThreeReady] = useState(false);
@@ -84,6 +85,20 @@ export default function UserAccountPage() {
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+
+  useEffect(() => {
+    if (!isMobileNavOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsMobileNavOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isMobileNavOpen]);
 
   const handleSaveProfile = async () => {
     if (!supabase) return;
@@ -212,8 +227,77 @@ export default function UserAccountPage() {
       />
 
       <div className="relative z-10 min-h-screen bg-transparent text-white flex flex-col md:flex-row">
-        <aside className="w-full md:w-[280px] p-6 md:p-10 flex flex-col gap-16 shrink-0">
-          <Image src="/Fitbase logo.png" alt="Fitbase" width={150} height={35} priority className="h-auto w-[120px] md:w-[150px]" />
+        <header className="md:hidden px-4 py-4 flex items-center justify-between border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <Image src="/Fitbase logo.png" alt="Fitbase" width={130} height={30} priority className="h-auto w-[120px]" />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right max-w-[45vw]">
+              <div className="text-sm font-bold truncate">{fullName || "Používateľ"}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsMobileNavOpen(true)}
+              className="h-10 w-10 inline-flex items-center justify-center rounded-full border border-white/10 bg-zinc-950/40 hover:bg-zinc-900/60 transition-colors"
+              aria-label="Menu"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        {isMobileNavOpen && (
+          <div className="md:hidden fixed inset-0 z-[200]">
+            <div
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setIsMobileNavOpen(false)}
+            />
+            <div className="absolute top-0 left-0 h-full w-[82vw] max-w-[320px] bg-zinc-950 border-r border-white/10 px-6 pt-4 pb-6 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex items-center justify-between mb-6">
+                <Image src="/Fitbase logo.png" alt="Fitbase" width={140} height={32} priority className="h-auto w-[120px]" />
+                <button
+                  type="button"
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className="h-10 w-10 inline-flex items-center justify-center rounded-full border border-white/10 bg-zinc-950/40 hover:bg-zinc-900/60 transition-colors"
+                  aria-label="Zatvoriť"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <div className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Prihlásený používateľ</div>
+                <div className="text-lg font-bold text-white truncate">{fullName || "Používateľ"}</div>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-2 px-2">
+                <nav className="flex flex-col gap-2 pb-6">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id);
+                        setIsMobileNavOpen(false);
+                      }}
+                      className={`text-left px-4 py-3 rounded-2xl font-display text-xl tracking-wide transition-colors ${
+                        activeTab === tab.id ? "bg-emerald-500 text-black" : "text-white hover:bg-white/5"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <aside className="hidden md:flex w-[280px] p-10 flex-col gap-16 shrink-0 h-screen overflow-y-auto">
+          <Image src="/Fitbase logo.png" alt="Fitbase" width={150} height={35} priority className="h-auto w-[150px]" />
           <nav className="flex flex-col gap-4">
             {tabs.map((tab) => (
               <button
