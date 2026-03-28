@@ -201,8 +201,6 @@ export async function getAvailableSlots(
   const slotDurationMs = slotDurationMinutes * 60 * 1000;
 
   for (let offsetDays = 0; offsetDays <= lookaheadDays; offsetDays++) {
-    if (finalAvailableSlots.length >= maxSlots) break;
-
     const dayParts = addDaysToDateParts(todayInTz, offsetDays);
     const dayOfWeek = getDbDayOfWeek(dayParts);
 
@@ -210,8 +208,6 @@ export async function getAvailableSlots(
     if (rulesForThisDay.length === 0) continue;
 
     for (const rule of rulesForThisDay) {
-      if (finalAvailableSlots.length >= maxSlots) break;
-
       const start = parseTimeToHourMinute(rule.start_time);
       const end = parseTimeToHourMinute(rule.end_time);
 
@@ -220,8 +216,6 @@ export async function getAvailableSlots(
 
       let currentSlotStartUtc = new Date(ruleStartUtc.getTime());
       while (currentSlotStartUtc.getTime() + slotDurationMs <= ruleEndUtc.getTime()) {
-        if (finalAvailableSlots.length >= maxSlots) break;
-
         const currentSlotEndUtc = new Date(currentSlotStartUtc.getTime() + slotDurationMs);
 
         if (currentSlotStartUtc < now) {
@@ -249,7 +243,8 @@ export async function getAvailableSlots(
 
   // Zoradenie finálnych termínov
   finalAvailableSlots.sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
-  console.log(`[getAvailableSlots] Hotovo. Vraciam ${finalAvailableSlots.length} slotov.`);
+  const limited = finalAvailableSlots.length > maxSlots ? finalAvailableSlots.slice(0, maxSlots) : finalAvailableSlots;
+  console.log(`[getAvailableSlots] Hotovo. Vygenerované: ${finalAvailableSlots.length}, vraciam: ${limited.length}`);
 
-  return finalAvailableSlots;
+  return limited;
 }
