@@ -551,7 +551,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           {services.personal_training && (
             <button
               onClick={() => setIsPersonalTrainingModalOpen(true)}
-              className="w-full bg-emerald-500 text-black font-bold py-4 px-6 rounded-[22px] text-lg uppercase tracking-wide border border-emerald-400/20 shadow-[0_18px_40px_-22px_rgba(16,185,129,0.75)] transition-all duration-200 hover:bg-emerald-400 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 focus:ring-offset-black"
+              className="w-full bg-emerald-500 text-black font-bold py-3 md:py-4 px-4 md:px-6 rounded-[22px] text-[12px] sm:text-[13px] md:text-lg uppercase tracking-normal md:tracking-wide whitespace-nowrap leading-none border border-emerald-400/20 shadow-[0_18px_40px_-22px_rgba(16,185,129,0.75)] transition-all duration-200 hover:bg-emerald-400 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 focus:ring-offset-black"
             >
               Rezervovať osobný tréning
             </button>
@@ -559,7 +559,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           {services.online_consultation && (
             <button
               onClick={() => setIsOnlineConsultationModalModalOpen(true)}
-              className="w-full bg-emerald-500 text-black font-bold py-4 px-6 rounded-[22px] text-lg uppercase tracking-wide border border-emerald-400/20 shadow-[0_18px_40px_-22px_rgba(16,185,129,0.75)] transition-all duration-200 hover:bg-emerald-400 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 focus:ring-offset-black"
+              className="w-full bg-emerald-500 text-black font-bold py-3 md:py-4 px-4 md:px-6 rounded-[22px] text-[12px] sm:text-[13px] md:text-lg uppercase tracking-normal md:tracking-wide whitespace-nowrap leading-none border border-emerald-400/20 shadow-[0_18px_40px_-22px_rgba(16,185,129,0.75)] transition-all duration-200 hover:bg-emerald-400 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 focus:ring-offset-black"
             >
               Rezervovať online konzultáciu
             </button>
@@ -567,7 +567,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           {services.meal_plan && (
             <button
               onClick={() => setIsMealPlanModalOpen(true)}
-              className="w-full bg-emerald-500 text-black font-bold py-4 px-6 rounded-[22px] text-lg uppercase tracking-wide border border-emerald-400/20 shadow-[0_18px_40px_-22px_rgba(16,185,129,0.75)] transition-all duration-200 hover:bg-emerald-400 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 focus:ring-offset-black"
+              className="w-full bg-emerald-500 text-black font-bold py-3 md:py-4 px-4 md:px-6 rounded-[22px] text-[12px] sm:text-[13px] md:text-lg uppercase tracking-normal md:tracking-wide whitespace-nowrap leading-none border border-emerald-400/20 shadow-[0_18px_40px_-22px_rgba(16,185,129,0.75)] transition-all duration-200 hover:bg-emerald-400 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 focus:ring-offset-black"
             >
               Objednať jedálniček
             </button>
@@ -575,7 +575,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           {services.brands && trainer.brands && trainer.brands.length > 0 && (
             <button
               onClick={() => setIsBrandsModalOpen(true)}
-              className="w-full bg-emerald-500 text-black font-bold py-4 px-6 rounded-[22px] text-lg uppercase tracking-wide border border-emerald-400/20 shadow-[0_18px_40px_-22px_rgba(16,185,129,0.75)] transition-all duration-200 hover:bg-emerald-400 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 focus:ring-offset-black"
+              className="w-full bg-emerald-500 text-black font-bold py-3 md:py-4 px-4 md:px-6 rounded-[22px] text-[12px] sm:text-[13px] md:text-lg uppercase tracking-normal md:tracking-wide whitespace-nowrap leading-none border border-emerald-400/20 shadow-[0_18px_40px_-22px_rgba(16,185,129,0.75)] transition-all duration-200 hover:bg-emerald-400 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 focus:ring-offset-black"
             >
               Moje odporúčané značky
             </button>
