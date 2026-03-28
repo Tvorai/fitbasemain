@@ -73,6 +73,8 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
   const [isOnlineConsultationModalOpen, setIsOnlineConsultationModalModalOpen] = useState(false);
   const [isMealPlanModalOpen, setIsMealPlanModalOpen] = useState(false);
   const [isBrandsModalOpen, setIsBrandsModalOpen] = useState(false);
+  const [isAllResultsModalOpen, setIsAllResultsModalOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   const loadTrainer = useCallback(async () => {
     setLoading(true);
@@ -615,16 +617,22 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           <div className="mt-12">
             <h2 className="text-3xl font-bold text-center mb-6 font-display uppercase tracking-wider">Výsledky klientov</h2>
             <div className="space-y-6">
-              {clientResults.map((result) => (
+              {clientResults.slice(0, 2).map((result) => (
                 <div key={result.id} className="bg-zinc-900/30 border border-emerald-500/30 rounded-[25px] p-4 backdrop-blur-sm overflow-hidden">
                   <div className="flex gap-2 aspect-[4/3] mb-4">
-                    <div className="relative flex-1 rounded-2xl overflow-hidden border border-zinc-800">
+                    <div 
+                      className="relative flex-1 rounded-2xl overflow-hidden border border-zinc-800 cursor-zoom-in"
+                      onClick={() => setLightboxImage(result.before_image_url)}
+                    >
                       <Image src={result.before_image_url} alt="Pred" fill className="object-cover" />
                       <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-[10px] uppercase font-bold text-white tracking-widest">
                         Pred
                       </div>
                     </div>
-                    <div className="relative flex-1 rounded-2xl overflow-hidden border border-emerald-500/30">
+                    <div 
+                      className="relative flex-1 rounded-2xl overflow-hidden border border-emerald-500/30 cursor-zoom-in"
+                      onClick={() => setLightboxImage(result.after_image_url)}
+                    >
                       <Image src={result.after_image_url} alt="Po" fill className="object-cover" />
                       <div className="absolute bottom-2 right-2 bg-emerald-500/80 backdrop-blur-md px-2 py-0.5 rounded text-[10px] uppercase font-bold text-black tracking-widest">
                         Po
@@ -640,6 +648,14 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
                 </div>
               ))}
             </div>
+            {clientResults.length > 0 && (
+              <button 
+                onClick={() => setIsAllResultsModalOpen(true)}
+                className="w-full text-center text-[10px] text-zinc-500 mt-4 hover:text-zinc-300 transition-colors uppercase tracking-widest font-bold"
+              >
+                + Všetky výsledky
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -726,6 +742,62 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           <p className="text-zinc-400 italic">Pre tohto trénera nie sú zatiaľ dostupné žiadne odporúčané značky.</p>
         )}
       </Modal>
+
+      <Modal
+        isOpen={isAllResultsModalOpen}
+        onClose={() => setIsAllResultsModalOpen(false)}
+        title="Všetky výsledky"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+          {clientResults.map((result) => (
+            <div key={result.id} className="bg-zinc-900/50 border border-emerald-500/20 rounded-2xl p-3">
+              <div className="flex gap-2 aspect-[4/3] mb-3">
+                <div 
+                  className="relative flex-1 rounded-xl overflow-hidden border border-zinc-800 cursor-zoom-in"
+                  onClick={() => setLightboxImage(result.before_image_url)}
+                >
+                  <Image src={result.before_image_url} alt="Pred" fill className="object-cover" />
+                </div>
+                <div 
+                  className="relative flex-1 rounded-xl overflow-hidden border border-emerald-500/30 cursor-zoom-in"
+                  onClick={() => setLightboxImage(result.after_image_url)}
+                >
+                  <Image src={result.after_image_url} alt="Po" fill className="object-cover" />
+                </div>
+              </div>
+              {result.client_name && <div className="text-white font-bold text-sm">{result.client_name}</div>}
+              {result.note && <div className="text-zinc-400 text-xs italic mt-1 line-clamp-2">{result.note}</div>}
+            </div>
+          ))}
+        </div>
+      </Modal>
+
+      {lightboxImage && (
+        <div 
+          className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button 
+            className="absolute top-6 right-6 text-white/70 hover:text-white transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxImage(null);
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <div className="relative w-full max-w-4xl max-h-[85vh] aspect-auto flex items-center justify-center">
+            <img 
+              src={lightboxImage} 
+              alt="Zväčšený náhľad" 
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
