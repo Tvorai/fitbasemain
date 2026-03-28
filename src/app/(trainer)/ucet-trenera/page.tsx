@@ -922,8 +922,8 @@ export default function TrainerDashboardPage() {
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setIsMobileNavOpen(false)}
           />
-          <div className="absolute top-0 left-0 h-full w-[82vw] max-w-[320px] bg-zinc-950 border-r border-white/10 p-6 flex flex-col min-h-0 overflow-hidden">
-            <div className="flex items-center justify-between mb-10">
+          <div className="absolute top-0 left-0 h-full w-[82vw] max-w-[320px] bg-zinc-950 border-r border-white/10 px-6 pt-4 pb-6 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex items-center justify-between mb-6">
               <Image src="/Fitbase logo.png" alt="Fitbase" width={140} height={32} priority className="h-auto w-[120px]" />
               <button
                 type="button"
@@ -937,7 +937,7 @@ export default function TrainerDashboardPage() {
               </button>
             </div>
 
-            <div className="mb-6">
+            <div className="mb-4">
               <div className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Prihlásený tréner</div>
               <div className="text-lg font-bold text-white truncate">{fullName || "Tréner"}</div>
             </div>
