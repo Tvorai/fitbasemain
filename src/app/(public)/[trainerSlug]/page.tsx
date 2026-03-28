@@ -68,6 +68,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
 
   // States for popups
   const [isPersonalTrainingModalOpen, setIsPersonalTrainingModalOpen] = useState(false);
+  const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [pendingFormValues, setPendingFormValues] = useState<{ client_name: string; client_email: string; client_phone: string; note: string } | null>(null);
   const [isOnlineConsultationModalOpen, setIsOnlineConsultationModalModalOpen] = useState(false);
@@ -606,7 +607,10 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
                   </div>
                 )}
               </div>
-              <button className="w-full text-center text-[10px] text-zinc-500 mt-4 hover:text-zinc-300 transition-colors uppercase tracking-widest font-bold">
+              <button 
+                onClick={() => setIsReviewsModalOpen(true)}
+                className="w-full text-center text-[10px] text-zinc-500 mt-4 hover:text-zinc-300 transition-colors uppercase tracking-widest font-bold"
+              >
                 + Všetky recenzie
               </button>
             </div>
@@ -741,6 +745,47 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
         ) : (
           <p className="text-zinc-400 italic">Pre tohto trénera nie sú zatiaľ dostupné žiadne odporúčané značky.</p>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={isReviewsModalOpen}
+        onClose={() => setIsReviewsModalOpen(false)}
+        title="Všetky recenzie"
+      >
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+          {reviews.map((r) => (
+            <div key={r.id} className="bg-zinc-900/40 border border-emerald-500/20 rounded-[25px] p-5">
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <div>
+                  <div className="text-white font-bold">{r.client_name}</div>
+                  <div className="text-zinc-500 text-[10px] uppercase tracking-widest font-bold mt-1">
+                    {new Date(r.created_at).toLocaleDateString("sk-SK")}
+                  </div>
+                </div>
+                <div className="flex text-yellow-400">
+                  {[...Array(5)].map((_, i) => (
+                    <svg
+                      key={i}
+                      viewBox="0 0 20 20"
+                      className={`w-4 h-4 ${r.rating > i ? "fill-current" : "fill-transparent"} stroke-current`}
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+              <div className="text-zinc-200 text-sm italic leading-relaxed">&quot;{r.comment}&quot;</div>
+              {r.photo_url && (
+                <div className="mt-4">
+                  <img src={r.photo_url} alt="" className="w-full rounded-2xl border border-white/10 cursor-zoom-in" onClick={() => setLightboxImage(r.photo_url)} />
+                </div>
+              )}
+            </div>
+          ))}
+          {reviews.length === 0 && (
+            <p className="text-center text-zinc-500 italic py-10">Zatiaľ žiadne recenzie.</p>
+          )}
+        </div>
       </Modal>
 
       <Modal
