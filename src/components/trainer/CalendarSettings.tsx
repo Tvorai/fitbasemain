@@ -1,11 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-import { supabaseUrl, supabaseAnonKey } from "@/lib/config";
-import { saveAvailabilityAction } from "@/lib/availability/saveAvailability";
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { loadAvailabilityAction, saveAvailabilityAction } from "@/lib/availability/saveAvailability";
 
 interface CalendarSettingsProps {
   trainerId: string;
@@ -190,16 +186,12 @@ export default function CalendarSettings({
       if (!trainerId) return { rowCount: 0 };
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("availability_slots")
-          .select("day_of_week, start_time, end_time")
-          .eq("trainer_id", trainerId)
-          .eq("service_type", serviceType)
-          .eq("is_active", true);
+        const res = await loadAvailabilityAction(trainerId, serviceType);
+        if (!res.success) {
+          throw new Error(res.error);
+        }
 
-        if (error) throw error;
-
-        const rawRows = Array.isArray(data) ? data : [];
+        const rawRows = res.data;
         const rows = rawRows.map(toAvailabilitySlotRow).filter((row): row is AvailabilitySlotRow => row !== null);
         const { availability: nextAvailability, expanded } = buildAvailabilityFromRows(rows);
 
@@ -233,6 +225,17 @@ export default function CalendarSettings({
   useEffect(() => {
     void loadAvailability("effect");
   }, [loadAvailability]);
+
+  useEffect(() => {
+    if (!debug) return;
+    console.log("[CalendarSettings] state before render", {
+      trainerId,
+      serviceType,
+      slotDurationMinutes,
+      timeLabels,
+      availability,
+    });
+  }, [availability, debug, serviceType, slotDurationMinutes, timeLabels, trainerId]);
 
   const toggleDay = (dayId: number) => {
     setAvailability(prev => {

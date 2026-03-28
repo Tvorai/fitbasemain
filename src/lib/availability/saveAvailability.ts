@@ -111,3 +111,58 @@ export async function saveAvailabilityAction(
     return { success: false, error: message };
   }
 }
+
+type AvailabilityRow = {
+  day_of_week: number | string | null;
+  start_time: string | null;
+  end_time: string | null;
+};
+
+function toAvailabilityRow(value: unknown): AvailabilityRow | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const dayRaw = record.day_of_week;
+  const startRaw = record.start_time;
+  const endRaw = record.end_time;
+
+  return {
+    day_of_week: typeof dayRaw === "number" || typeof dayRaw === "string" ? dayRaw : null,
+    start_time: typeof startRaw === "string" ? startRaw : null,
+    end_time: typeof endRaw === "string" ? endRaw : null,
+  };
+}
+
+export async function loadAvailabilityAction(
+  trainerId: string,
+  serviceType: "personal" | "online"
+): Promise<{ success: true; data: AvailabilityRow[] } | { success: false; error: string }> {
+  if (!supabaseUrl || !serviceRoleKey) {
+    return { success: false, error: "Supabase konfigurácia chýba." };
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  try {
+    const { data, error } = await supabase
+      .from("availability_slots")
+      .select("day_of_week, start_time, end_time")
+      .eq("trainer_id", trainerId)
+      .eq("service_type", serviceType)
+      .eq("is_active", true);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    const rows = (Array.isArray(data) ? data : [])
+      .map(toAvailabilityRow)
+      .filter((row): row is AvailabilityRow => row !== null);
+
+    return { success: true, data: rows };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Neznáma chyba pri načítaní dostupnosti.";
+    return { success: false, error: message };
+  }
+}
