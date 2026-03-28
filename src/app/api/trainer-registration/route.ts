@@ -78,7 +78,7 @@ export async function POST(req: Request) {
 
   const { createClient } = await import("@supabase/supabase-js");
 
-  const emailRedirectTo = siteUrl ? new URL("/prihlasenie-trenera", siteUrl).toString() : undefined;
+  const emailRedirectTo = siteUrl ? new URL("/prihlasenie?mode=trainer", siteUrl).toString() : undefined;
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false, autoRefreshToken: false }

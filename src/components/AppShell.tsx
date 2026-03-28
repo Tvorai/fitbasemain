@@ -13,6 +13,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     "/nadstavenia",
     "/historia-rezervacii",
     "/historia-platieb",
+    "/prihlasenie",
+    "/registracia",
     "/prihlasenie-trenera",
     "/prihlásenie-trénera",
     "/prihl%C3%A1senie-tr%C3%A9nera",
@@ -27,6 +29,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isPublicTrainerProfile = isSingleSegmentPath && !reservedRoutes.has(pathname);
 
   const hideChrome =
+    pathname === "/prihlasenie" ||
+    pathname === "/registracia" ||
     pathname === "/registrácia-trénera" ||
     pathname === "/registracia-trenera" ||
     pathname === "/registr%C3%A1cia-tr%C3%A9nera" ||

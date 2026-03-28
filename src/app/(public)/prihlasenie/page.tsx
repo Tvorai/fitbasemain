@@ -3,12 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { featureFlags, supabaseAnonKey, supabaseUrl } from "@/lib/config";
 import { useI18n } from "@/providers/i18n";
 
 const supabase = featureFlags.supabaseEnabled ? createClient(supabaseUrl, supabaseAnonKey) : null;
+
+type AuthMode = "user" | "trainer";
 
 export default function UserLoginPage() {
   const { messages } = useI18n();
@@ -18,6 +20,13 @@ export default function UserLoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>("user");
+  const [modeError, setModeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    if (mode === "trainer") setAuthMode("trainer");
+  }, []);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -35,11 +44,40 @@ export default function UserLoginPage() {
 
         <div className="grid gap-10 md:grid-cols-[minmax(380px,520px)_1fr] md:items-center md:gap-16">
           <div className="max-w-xl md:max-w-none">
+            <div className="inline-flex rounded-full bg-zinc-950/60 border border-zinc-800 p-1 mb-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("user");
+                  setModeError(null);
+                  setShowForgotPassword(false);
+                }}
+                className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${
+                  authMode === "user" ? "bg-emerald-500 text-black" : "text-zinc-300 hover:text-white"
+                }`}
+              >
+                Prihlásenie
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("trainer");
+                  setModeError(null);
+                  setShowForgotPassword(false);
+                }}
+                className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${
+                  authMode === "trainer" ? "bg-emerald-500 text-black" : "text-zinc-300 hover:text-white"
+                }`}
+              >
+                Prihlásiť sa ako tréner
+              </button>
+            </div>
+
             <h1 className="font-display text-5xl leading-[0.9] tracking-wide md:text-6xl">
-              {messages.pages.userLogin.title.toUpperCase()}
+              {(authMode === "trainer" ? "Prihlásenie trénera" : messages.pages.userLogin.title).toUpperCase()}
             </h1>
             <p className="mt-3 text-sm italic text-white/70 md:text-base">
-              {messages.pages.userLogin.subtitle}
+              {authMode === "trainer" ? "Posuňte svoju profesiu na nový level" : messages.pages.userLogin.subtitle}
             </p>
 
             <form
@@ -49,6 +87,7 @@ export default function UserLoginPage() {
                 if (loading) return;
 
                 setShowForgotPassword(false);
+                setModeError(null);
 
                 if (!supabase) return;
                 if (!email.trim() || !password) return;
@@ -62,6 +101,31 @@ export default function UserLoginPage() {
 
                 if (error) {
                   setShowForgotPassword(true);
+                  return;
+                }
+
+                if (authMode === "trainer") {
+                  const userRes = await supabase.auth.getUser();
+                  const user = userRes.data.user;
+                  if (!user) {
+                    await supabase.auth.signOut();
+                    setModeError("Nepodarilo sa overiť účet trénera. Skúste to znova.");
+                    return;
+                  }
+
+                  const trainerRes = await supabase
+                    .from("trainers")
+                    .select("id")
+                    .eq("profile_id", user.id)
+                    .maybeSingle<{ id: string }>();
+
+                  if (trainerRes.error || !trainerRes.data?.id) {
+                    await supabase.auth.signOut();
+                    setModeError("Tento účet nie je tréner.");
+                    return;
+                  }
+
+                  router.push("/ucet-trenera");
                   return;
                 }
 
@@ -108,6 +172,12 @@ export default function UserLoginPage() {
                 {messages.pages.userLogin.submit.toUpperCase()}
               </button>
 
+              {modeError ? (
+                <div className="mt-3 text-center text-sm text-red-300">
+                  {modeError}
+                </div>
+              ) : null}
+
               {showForgotPassword ? (
                 <div className="mt-3 text-center text-sm text-white/80">
                   {messages.pages.userLogin.forgotPasswordHint}
@@ -116,7 +186,10 @@ export default function UserLoginPage() {
 
               <div className="mt-3 text-center text-sm text-white/80">
                 <span>Nemáte účet? </span>
-                <Link href="/registracia" className="font-semibold text-emerald-400 hover:text-emerald-300">
+                <Link
+                  href={authMode === "trainer" ? "/registracia?mode=trainer" : "/registracia"}
+                  className="font-semibold text-emerald-400 hover:text-emerald-300"
+                >
                   Registrovať sa
                 </Link>
               </div>
