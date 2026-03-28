@@ -34,7 +34,16 @@ export async function saveAvailabilityAction(
 
     if (deleteError) throw deleteError;
 
-    const newSlots: any[] = [];
+    type NewAvailabilitySlot = {
+      trainer_id: string;
+      day_of_week: number;
+      start_time: string;
+      end_time: string;
+      is_active: boolean;
+      service_type: "personal" | "online";
+    };
+
+    const newSlots: NewAvailabilitySlot[] = [];
 
     // 2. Spracovať každý deň a nájsť súvislé časové úseky
     for (let day = 1; day <= 7; day++) {
@@ -96,8 +105,9 @@ export async function saveAvailabilityAction(
     }
 
     return { success: true };
-  } catch (error: any) {
-    console.error("Chyba pri ukladaní dostupnosti:", error);
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Neznáma chyba pri ukladaní dostupnosti.";
+    console.error("Chyba pri ukladaní dostupnosti:", message);
+    return { success: false, error: message };
   }
 }

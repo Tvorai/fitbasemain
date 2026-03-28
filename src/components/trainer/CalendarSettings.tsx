@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseUrl, supabaseAnonKey } from "@/lib/config";
 import { saveAvailabilityAction } from "@/lib/availability/saveAvailability";
@@ -30,21 +30,103 @@ export default function CalendarSettings({
   serviceType = "personal",
   slotDurationMinutes = 60
 }: CalendarSettingsProps) {
-  // Inicializujeme stav s prázdnymi dňami, aby sme predišli undefined chybám pri prvom renderi
-  const [availability, setAvailability] = useState<Record<number, { isDayActive: boolean; activeSlots: { hour: number; minute: number }[] }>>(() => {
-    const initial: Record<number, { isDayActive: boolean; activeSlots: { hour: number; minute: number }[] }> = {};
-    DAYS.forEach(day => {
+  type TimeSlot = { hour: number; minute: number };
+  type DayAvailability = { isDayActive: boolean; activeSlots: TimeSlot[] };
+  type AvailabilityState = Record<number, DayAvailability>;
+  type AvailabilitySlotRow = { day_of_week: number | null; start_time: string | null; end_time: string | null };
+
+  const debug = process.env.NODE_ENV !== "production";
+
+  const createEmptyAvailability = useCallback((): AvailabilityState => {
+    const initial: AvailabilityState = {};
+    DAYS.forEach((day) => {
       initial[day.id] = { isDayActive: false, activeSlots: [] };
     });
     return initial;
-  });
+  }, []);
+
+  const parseDbTime = useCallback((value: string): { hour: number; minute: number } | null => {
+    const match = value.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (!match) return null;
+    const hour = Number(match[1]);
+    const minute = Number(match[2]);
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+    return { hour, minute };
+  }, []);
+
+  const toTimeLabel = useCallback((hour: number, minute: number) => {
+    return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+  }, []);
+
+  const timeLabels = useMemo(() => {
+    const slotsPerHour = Math.max(1, Math.floor(60 / slotDurationMinutes));
+    return HOURS.flatMap((hour) =>
+      Array.from({ length: slotsPerHour }, (_, slotIdx) => {
+        const minute = slotIdx * slotDurationMinutes;
+        return toTimeLabel(hour, minute);
+      })
+    );
+  }, [slotDurationMinutes, toTimeLabel]);
+
+  const toAvailabilitySlotRow = useCallback((value: unknown): AvailabilitySlotRow | null => {
+    if (!value || typeof value !== "object") return null;
+    const record = value as Record<string, unknown>;
+    const dayRaw = record.day_of_week;
+    const startRaw = record.start_time;
+    const endRaw = record.end_time;
+
+    const day_of_week = typeof dayRaw === "number" ? dayRaw : null;
+    const start_time = typeof startRaw === "string" ? startRaw : null;
+    const end_time = typeof endRaw === "string" ? endRaw : null;
+    return { day_of_week, start_time, end_time };
+  }, []);
+
+  const buildAvailabilityFromRows = useCallback(
+    (rows: AvailabilitySlotRow[]): AvailabilityState => {
+      const currentAvailability = createEmptyAvailability();
+
+      rows.forEach((slot) => {
+        const dayId = slot.day_of_week;
+        if (!dayId || !currentAvailability[dayId]) return;
+        if (!slot.start_time || !slot.end_time) return;
+
+        const start = parseDbTime(slot.start_time);
+        const end = parseDbTime(slot.end_time);
+        if (!start || !end) return;
+
+        currentAvailability[dayId].isDayActive = true;
+
+        let currentH = start.hour;
+        let currentM = start.minute;
+
+        while (currentH < end.hour || (currentH === end.hour && currentM < end.minute)) {
+          if (HOURS.includes(currentH)) {
+            currentAvailability[dayId].activeSlots.push({ hour: currentH, minute: currentM });
+          }
+
+          currentM += slotDurationMinutes;
+          if (currentM >= 60) {
+            currentH += Math.floor(currentM / 60);
+            currentM = currentM % 60;
+          }
+        }
+      });
+
+      return currentAvailability;
+    },
+    [createEmptyAvailability, parseDbTime, slotDurationMinutes]
+  );
+
+  // Inicializujeme stav s prázdnymi dňami, aby sme predišli undefined chybám pri prvom renderi
+  const [availability, setAvailability] = useState<AvailabilityState>(() => createEmptyAvailability());
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    async function loadAvailability() {
-      if (!trainerId) return;
+  const loadAvailability = useCallback(
+    async (source: "effect" | "afterSave") => {
+      if (!trainerId) return { rowCount: 0 };
       setLoading(true);
       try {
         const { data, error } = await supabase
@@ -56,46 +138,39 @@ export default function CalendarSettings({
 
         if (error) throw error;
 
-        // Reset na čistý stav pred naplnením dátami z DB
-        const currentAvailability: Record<number, { isDayActive: boolean; activeSlots: { hour: number; minute: number }[] }> = {};
-        DAYS.forEach(day => {
-          currentAvailability[day.id] = { isDayActive: false, activeSlots: [] };
-        });
+        const rawRows = Array.isArray(data) ? data : [];
+        const rows = rawRows.map(toAvailabilitySlotRow).filter((row): row is AvailabilitySlotRow => row !== null);
+        const nextAvailability = buildAvailabilityFromRows(rows);
 
-        data?.forEach(slot => {
-          const dayId = slot.day_of_week;
-          if (!dayId) return;
+        if (debug) {
+          console.log("[CalendarSettings] loadAvailability", {
+            source,
+            trainerId,
+            serviceType,
+            slotDurationMinutes,
+            timeLabels,
+            rawRows,
+            normalizedRows: rows,
+            transformedAvailability: nextAvailability,
+            sampleTimeCompare: { ui: "05:00", db: "05:00:00", normalizedDb: parseDbTime("05:00:00") },
+          });
+        }
 
-          const [startH, startM] = slot.start_time.split(":").map(Number);
-          const [endH, endM] = slot.end_time.split(":").map(Number);
-          
-          currentAvailability[dayId].isDayActive = true;
-          
-          let currentH = startH;
-          let currentM = startM;
-          
-          while (currentH < endH || (currentH === endH && currentM < endM)) {
-            if (HOURS.includes(currentH)) {
-              currentAvailability[dayId].activeSlots.push({ hour: currentH, minute: currentM });
-            }
-            
-            currentM += slotDurationMinutes;
-            if (currentM >= 60) {
-              currentH += Math.floor(currentM / 60);
-              currentM = currentM % 60;
-            }
-          }
-        });
-
-        setAvailability(currentAvailability);
+        setAvailability(nextAvailability);
+        return { rowCount: rows.length };
       } catch (err) {
-        console.error("Chyba pri načítaní dostupnosti:", err);
+        console.error("[CalendarSettings] Chyba pri načítaní dostupnosti:", err);
+        return { rowCount: 0 };
       } finally {
         setLoading(false);
       }
-    }
-    loadAvailability();
-  }, [trainerId, serviceType, slotDurationMinutes]);
+    },
+    [buildAvailabilityFromRows, debug, parseDbTime, serviceType, slotDurationMinutes, timeLabels, toAvailabilitySlotRow, trainerId]
+  );
+
+  useEffect(() => {
+    void loadAvailability("effect");
+  }, [loadAvailability]);
 
   const toggleDay = (dayId: number) => {
     setAvailability(prev => {
@@ -143,11 +218,18 @@ export default function CalendarSettings({
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Potrebujeme upraviť saveAvailabilityAction alebo vytvoriť novú, ktorá podporuje serviceType a minúty
-      // Pre tento moment skúsime poslať dáta tak, ako sú, ale s upravenou štruktúrou
-      const res = await saveAvailabilityAction(trainerId, availability as any, serviceType, slotDurationMinutes);
+      const before = availability;
+      const res = await saveAvailabilityAction(trainerId, availability, serviceType, slotDurationMinutes);
       if (res.success) {
         alert("Nastavenia kalendára boli uložené.");
+        const refetch = async () => loadAvailability("afterSave");
+        const { rowCount } = await refetch();
+        const hasSelection =
+          Object.values(before).some((d) => d.isDayActive && d.activeSlots.length > 0);
+        if (hasSelection && rowCount === 0) {
+          await new Promise<void>((resolve) => setTimeout(resolve, 250));
+          await refetch();
+        }
       } else {
         alert("Chyba: " + res.error);
       }
