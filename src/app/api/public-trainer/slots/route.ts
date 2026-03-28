@@ -6,6 +6,9 @@ export async function GET(request: Request) {
   const trainerId = searchParams.get("trainerId");
   const serviceType = (searchParams.get("serviceType") || "personal") as "personal" | "online";
   const slotDuration = parseInt(searchParams.get("slotDuration") || "60");
+  const rawMaxSlots = searchParams.get("maxSlots");
+  const parsedMaxSlots = rawMaxSlots ? parseInt(rawMaxSlots) : 250;
+  const maxSlots = Number.isFinite(parsedMaxSlots) ? Math.min(Math.max(parsedMaxSlots, 1), 500) : 250;
 
   if (!trainerId) {
     return NextResponse.json(
@@ -16,7 +19,7 @@ export async function GET(request: Request) {
 
   try {
     // Voláme existujúcu funkciu getAvailableSlots, ktorú sme upravili
-    const slots = await getAvailableSlots(trainerId, 7, slotDuration, 30, serviceType);
+    const slots = await getAvailableSlots(trainerId, 7, slotDuration, maxSlots, serviceType);
     
     if (!slots) {
       return NextResponse.json(

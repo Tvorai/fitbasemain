@@ -20,6 +20,7 @@ const AvailableSlots: React.FC<AvailableSlotsProps> = ({
   serviceType = "personal",
   slotDuration = 60
 }) => {
+  const maxSlots = 250;
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +60,9 @@ const AvailableSlots: React.FC<AvailableSlotsProps> = ({
     const fetchSlots = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/public-trainer/slots?trainerId=${trainerId}&serviceType=${serviceType}&slotDuration=${slotDuration}`);
+        const res = await fetch(
+          `/api/public-trainer/slots?trainerId=${trainerId}&serviceType=${serviceType}&slotDuration=${slotDuration}&maxSlots=${maxSlots}`
+        );
         if (res.ok) {
           const payload: unknown = await res.json();
           const parsed = Array.isArray(payload) ? payload.filter(isAvailableSlot) : [];
