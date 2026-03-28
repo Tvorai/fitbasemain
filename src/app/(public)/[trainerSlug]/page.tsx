@@ -551,7 +551,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           {services.personal_training && (
             <button
               onClick={() => setIsPersonalTrainingModalOpen(true)}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-6 rounded-[20px] text-lg transition-colors shadow-lg shadow-emerald-500/10 uppercase tracking-wide"
+              className="w-full bg-emerald-500 text-black font-bold py-4 px-6 rounded-[22px] text-lg uppercase tracking-wide border border-emerald-400/20 shadow-[0_18px_40px_-22px_rgba(16,185,129,0.75)] transition-all duration-200 hover:bg-emerald-400 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 focus:ring-offset-black"
             >
               Rezervovať osobný tréning
             </button>
@@ -559,7 +559,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           {services.online_consultation && (
             <button
               onClick={() => setIsOnlineConsultationModalModalOpen(true)}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-6 rounded-[20px] text-lg transition-colors shadow-lg shadow-emerald-500/10 uppercase tracking-wide"
+              className="w-full bg-emerald-500 text-black font-bold py-4 px-6 rounded-[22px] text-lg uppercase tracking-wide border border-emerald-400/20 shadow-[0_18px_40px_-22px_rgba(16,185,129,0.75)] transition-all duration-200 hover:bg-emerald-400 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 focus:ring-offset-black"
             >
               Rezervovať online konzultáciu
             </button>
@@ -567,7 +567,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           {services.meal_plan && (
             <button
               onClick={() => setIsMealPlanModalOpen(true)}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-6 rounded-[20px] text-lg transition-colors shadow-lg shadow-emerald-500/10 uppercase tracking-wide"
+              className="w-full bg-emerald-500 text-black font-bold py-4 px-6 rounded-[22px] text-lg uppercase tracking-wide border border-emerald-400/20 shadow-[0_18px_40px_-22px_rgba(16,185,129,0.75)] transition-all duration-200 hover:bg-emerald-400 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 focus:ring-offset-black"
             >
               Objednať jedálniček
             </button>
@@ -575,7 +575,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
           {services.brands && trainer.brands && trainer.brands.length > 0 && (
             <button
               onClick={() => setIsBrandsModalOpen(true)}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-6 rounded-[20px] text-lg transition-colors shadow-lg shadow-emerald-500/10 uppercase tracking-wide"
+              className="w-full bg-emerald-500 text-black font-bold py-4 px-6 rounded-[22px] text-lg uppercase tracking-wide border border-emerald-400/20 shadow-[0_18px_40px_-22px_rgba(16,185,129,0.75)] transition-all duration-200 hover:bg-emerald-400 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 focus:ring-offset-black"
             >
               Moje odporúčané značky
             </button>
@@ -609,7 +609,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
               </div>
               <button 
                 onClick={() => setIsReviewsModalOpen(true)}
-                className="w-full text-center text-[10px] text-zinc-500 mt-4 hover:text-zinc-300 transition-colors uppercase tracking-widest font-bold"
+                className="w-full text-center text-[10px] text-zinc-500 mt-4 hover:text-zinc-300 transition-colors uppercase tracking-widest font-bold underline underline-offset-4 decoration-zinc-700 hover:decoration-zinc-400"
               >
                 + Všetky recenzie
               </button>
@@ -655,7 +655,7 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
             {clientResults.length > 0 && (
               <button 
                 onClick={() => setIsAllResultsModalOpen(true)}
-                className="w-full text-center text-[10px] text-zinc-500 mt-4 hover:text-zinc-300 transition-colors uppercase tracking-widest font-bold"
+                className="w-full text-center text-[10px] text-zinc-500 mt-4 hover:text-zinc-300 transition-colors uppercase tracking-widest font-bold underline underline-offset-4 decoration-zinc-700 hover:decoration-zinc-400"
               >
                 + Všetky výsledky
               </button>
