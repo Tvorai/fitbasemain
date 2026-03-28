@@ -133,7 +133,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
       client_phone: string | null | undefined;
       client_note: string | null | undefined;
       booking_status: BookingStatus;
-      service_type?: string;
+      service_type: string;
     } = {
       trainer_id,
       client_profile_id: authUser.id,
@@ -144,7 +144,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
       client_phone,
       client_note: note,
       booking_status: "confirmed" as BookingStatus,
-      service_type,
+      service_type: service_type || "personal",
     };
     if (service_id) insertPayload.service_id = service_id;
 
@@ -164,7 +164,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
           client_phone: string | null | undefined;
           note: string | null | undefined;
           booking_status: BookingStatus;
-          service_type?: string;
+          service_type: string;
         } = {
           trainer_id,
           client_profile_id: authUser.id,
@@ -175,7 +175,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
           client_phone,
           note,
           booking_status: "confirmed" as BookingStatus,
-          service_type,
+          service_type: service_type || "personal",
         };
         if (service_id) fallbackPayload.service_id = service_id;
         insertResult = await supabase.from("bookings").insert(fallbackPayload).select("id").maybeSingle();

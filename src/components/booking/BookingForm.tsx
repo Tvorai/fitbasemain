@@ -36,6 +36,7 @@ type PendingBookingPayload = {
   trainerName: string;
   trainerEmail?: string;
   createdAt: number;
+  serviceType: "personal" | "online";
 };
 
 const PENDING_KEY = "fitbase_pending_booking";
@@ -52,6 +53,7 @@ function parsePendingBooking(raw: string): PendingBookingPayload | null {
     const form = parsed.form;
     const trainerName = parsed.trainerName;
     const createdAt = parsed.createdAt;
+    const serviceType = parsed.serviceType as "personal" | "online";
 
     if (!isRecord(slot)) return null;
     if (typeof slot.trainer_id !== "string" || typeof slot.starts_at !== "string" || typeof slot.ends_at !== "string" || typeof slot.source_availability_slot_id !== "string") {
@@ -71,6 +73,7 @@ function parsePendingBooking(raw: string): PendingBookingPayload | null {
       trainerName: typeof trainerName === "string" ? trainerName : "Tréner",
       trainerEmail: typeof parsed.trainerEmail === "string" ? parsed.trainerEmail : undefined,
       createdAt: typeof createdAt === "number" ? createdAt : Date.now(),
+      serviceType: serviceType || "personal",
     };
   } catch {
     return null;
@@ -133,7 +136,7 @@ export default function BookingForm({
         trainer_name: payload.trainerName,
         trainer_email: payload.trainerEmail,
         access_token: accessToken,
-        service_type: serviceType,
+        service_type: payload.serviceType,
       });
 
       setFormState(result);
@@ -186,6 +189,7 @@ export default function BookingForm({
         trainerName,
         trainerEmail,
         createdAt: Date.now(),
+        serviceType,
       };
 
       if (!session?.access_token) {
