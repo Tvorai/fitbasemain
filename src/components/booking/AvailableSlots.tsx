@@ -9,12 +9,16 @@ interface AvailableSlotsProps {
   trainerId: string;
   onSlotSelect?: (slot: AvailableSlot) => void;
   selectedSlot?: AvailableSlot | null;
+  serviceType?: "personal" | "online";
+  slotDuration?: number;
 }
 
 const AvailableSlots: React.FC<AvailableSlotsProps> = ({ 
   trainerId, 
   onSlotSelect,
-  selectedSlot: externalSelectedSlot 
+  selectedSlot: externalSelectedSlot,
+  serviceType = "personal",
+  slotDuration = 60
 }) => {
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +59,7 @@ const AvailableSlots: React.FC<AvailableSlotsProps> = ({
     const fetchSlots = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/public-trainer/slots?trainerId=${trainerId}`);
+        const res = await fetch(`/api/public-trainer/slots?trainerId=${trainerId}&serviceType=${serviceType}&slotDuration=${slotDuration}`);
         if (res.ok) {
           const payload: unknown = await res.json();
           const parsed = Array.isArray(payload) ? payload.filter(isAvailableSlot) : [];
@@ -74,7 +78,7 @@ const AvailableSlots: React.FC<AvailableSlotsProps> = ({
     if (trainerId) {
       fetchSlots();
     }
-  }, [trainerId]);
+  }, [trainerId, serviceType, slotDuration]);
 
   useEffect(() => {
     if (slots.length === 0) return;

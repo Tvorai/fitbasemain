@@ -4,6 +4,8 @@ import { getAvailableSlots } from "@/lib/booking/getAvailableSlots";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const trainerId = searchParams.get("trainerId");
+  const serviceType = (searchParams.get("serviceType") || "personal") as "personal" | "online";
+  const slotDuration = parseInt(searchParams.get("slotDuration") || "60");
 
   if (!trainerId) {
     return NextResponse.json(
@@ -13,9 +15,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Voláme existujúcu funkciu getAvailableSlots, ktorá používa availability_slots a bookings
-    // Nepoužívame tabuľku slots (ktorá je prázdna)
-    const slots = await getAvailableSlots(trainerId);
+    // Voláme existujúcu funkciu getAvailableSlots, ktorú sme upravili
+    const slots = await getAvailableSlots(trainerId, 7, slotDuration, 30, serviceType);
     
     if (!slots) {
       return NextResponse.json(

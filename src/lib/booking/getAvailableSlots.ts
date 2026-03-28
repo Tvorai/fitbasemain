@@ -127,9 +127,10 @@ export async function getAvailableSlots(
   trainerId: string,
   lookaheadDays: number = 7,
   slotDurationMinutes: number = 60,
-  maxSlots: number = 30
+  maxSlots: number = 30,
+  serviceType: "personal" | "online" = "personal"
 ): Promise<AvailableSlot[] | null> {
-  console.log(`[getAvailableSlots] Start pre trainerId: ${trainerId}`);
+  console.log(`[getAvailableSlots] Start pre trainerId: ${trainerId}, serviceType: ${serviceType}`);
   
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -152,12 +153,13 @@ export async function getAvailableSlots(
   const endInTz = addDaysToDateParts(todayInTz, lookaheadDays);
   const lookaheadEndUtc = zonedTimeToUtc(endInTz, 23, 59, timeZone);
 
-  console.log(`[getAvailableSlots] Načítanie availability_slots pre trainerId: ${trainerId}...`);
-  // 1. Načítanie aktívnych pravidiel dostupnosti pre trénera
+  console.log(`[getAvailableSlots] Načítanie availability_slots pre trainerId: ${trainerId}, serviceType: ${serviceType}...`);
+  // 1. Načítanie aktívnych pravidiel dostupnosti pre trénera a daný typ služby
   const { data: rawAvailabilityRules, error: rulesError } = await supabase
     .from("availability_slots")
     .select("id, trainer_id, day_of_week, start_time, end_time, is_active")
     .eq("trainer_id", trainerId)
+    .eq("service_type", serviceType)
     .eq("is_active", true);
 
   if (rulesError) {
@@ -168,13 +170,14 @@ export async function getAvailableSlots(
   const availabilityRules = (rawAvailabilityRules || []) as Slot[];
   console.log(`[getAvailableSlots] Počet nájdených pravidiel: ${availabilityRules.length}`);
 
-  console.log(`[getAvailableSlots] Načítanie bookings...`);
-  // 2. Načítanie existujúcich aktívnych rezervácií v danom časovom rozsahu
+  console.log(`[getAvailableSlots] Načítanie bookings pre serviceType: ${serviceType}...`);
+  // 2. Načítanie existujúcich aktívnych rezervácií v danom časovom rozsahu pre daný typ služby
   const activeBookingStatuses: BookingStatus[] = ["pending", "confirmed"];
   const { data: bookings, error: bookingsError } = await supabase
     .from("bookings")
     .select("starts_at, ends_at")
     .eq("trainer_id", trainerId)
+    .eq("service_type", serviceType)
     .in("booking_status", activeBookingStatuses)
     .gte("starts_at", now.toISOString())
     .lte("starts_at", lookaheadEndUtc.toISOString());

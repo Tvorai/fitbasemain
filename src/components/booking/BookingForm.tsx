@@ -27,6 +27,7 @@ interface BookingFormProps {
   initialValues?: Partial<BookingFormValues>;
   onSuccess?: () => void;
   onCancel?: () => void;
+  serviceType?: "personal" | "online";
 }
 
 type PendingBookingPayload = {
@@ -83,6 +84,7 @@ export default function BookingForm({
   initialValues,
   onSuccess,
   onCancel,
+  serviceType = "personal",
 }: BookingFormProps) {
   const [formState, setFormState] = useState<BookingFormState>({ status: "idle" });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -131,6 +133,7 @@ export default function BookingForm({
         trainer_name: payload.trainerName,
         trainer_email: payload.trainerEmail,
         access_token: accessToken,
+        service_type: serviceType,
       });
 
       setFormState(result);

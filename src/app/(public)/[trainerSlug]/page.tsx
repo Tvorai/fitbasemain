@@ -704,10 +704,34 @@ export default function TrainerProfilePage({ params }: { params: { trainerSlug: 
 
       <Modal
         isOpen={isOnlineConsultationModalOpen}
-        onClose={() => setIsOnlineConsultationModalModalOpen(false)}
+        onClose={() => {
+          setIsOnlineConsultationModalModalOpen(false);
+          setSelectedSlot(null);
+        }}
         title="Rezervovať online konzultáciu"
       >
-        <p>Tu bude obsah pre online konzultáciu.</p>
+        {!selectedSlot ? (
+          <div className="max-h-[70vh] overflow-y-auto">
+            <AvailableSlots 
+              trainerId={trainer.id} 
+              onSlotSelect={setSelectedSlot} 
+              serviceType="online"
+              slotDuration={30}
+            />
+          </div>
+        ) : (
+          <BookingForm 
+            selectedSlot={selectedSlot} 
+            trainerName={trainer.profiles?.full_name || ""} 
+            onSuccess={() => {
+              setIsOnlineConsultationModalModalOpen(false);
+              setSelectedSlot(null);
+              alert("Rezervácia online konzultácie bola úspešne odoslaná.");
+            }}
+            onCancel={() => setSelectedSlot(null)}
+            serviceType="online"
+          />
+        )}
       </Modal>
 
       <Modal

@@ -22,6 +22,7 @@ const bookingSchema = z.object({
   note: z.string().optional().nullable(),
   trainer_name: z.string().optional(), // Iba pre účely emailu
   trainer_email: z.string().email().optional(), // Iba pre účely emailu
+  service_type: z.enum(["personal", "online"]).optional(),
 });
 
 export type BookingFormState = 
@@ -48,7 +49,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
   const { 
     trainer_id, service_id, access_token, starts_at, ends_at, 
     client_name, client_email, client_phone, note,
-    trainer_name, trainer_email
+    trainer_name, trainer_email, service_type
   } = validatedFields.data;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -132,6 +133,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
       client_phone: string | null | undefined;
       client_note: string | null | undefined;
       booking_status: BookingStatus;
+      service_type?: string;
     } = {
       trainer_id,
       client_profile_id: authUser.id,
@@ -142,6 +144,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
       client_phone,
       client_note: note,
       booking_status: "confirmed" as BookingStatus,
+      service_type,
     };
     if (service_id) insertPayload.service_id = service_id;
 
@@ -161,6 +164,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
           client_phone: string | null | undefined;
           note: string | null | undefined;
           booking_status: BookingStatus;
+          service_type?: string;
         } = {
           trainer_id,
           client_profile_id: authUser.id,
@@ -171,6 +175,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
           client_phone,
           note,
           booking_status: "confirmed" as BookingStatus,
+          service_type,
         };
         if (service_id) fallbackPayload.service_id = service_id;
         insertResult = await supabase.from("bookings").insert(fallbackPayload).select("id").maybeSingle();
