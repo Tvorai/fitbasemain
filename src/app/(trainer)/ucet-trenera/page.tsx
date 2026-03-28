@@ -615,83 +615,111 @@ export default function TrainerDashboardPage() {
 
       case "znacky":
         return (
-          <div className="flex flex-col gap-10 w-full max-w-[600px] ml-auto">
-            {/* Sub-tabs */}
-            <div className="flex justify-end gap-10 mb-6">
-              <button 
-                onClick={() => setActiveBrandSubTab("pridat")}
-                className={`text-2xl font-display tracking-wide transition-colors ${activeBrandSubTab === "pridat" ? "text-emerald-500" : "text-white"}`}
-              >
-                + Pridať značku
-              </button>
+          <div className="flex flex-col gap-6 w-full max-w-[760px] ml-auto">
+            <h2 className="text-4xl font-display uppercase tracking-wider mb-4">Moje značky</h2>
+            
+            <div className="flex gap-4 mb-8">
               <button 
                 onClick={() => setActiveBrandSubTab("zoznam")}
-                className={`text-2xl font-display tracking-wide transition-colors ${activeBrandSubTab === "zoznam" ? "text-emerald-500" : "text-white"}`}
+                className={`px-6 py-2 rounded-full font-bold uppercase tracking-widest text-xs transition-all ${
+                  activeBrandSubTab === "zoznam" 
+                    ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/20" 
+                    : "bg-zinc-900/50 text-zinc-500 hover:text-white border border-white/5"
+                }`}
               >
                 Moje značky
+              </button>
+              <button 
+                onClick={() => setActiveBrandSubTab("pridat")}
+                className={`px-6 py-2 rounded-full font-bold uppercase tracking-widest text-xs transition-all ${
+                  activeBrandSubTab === "pridat" 
+                    ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/20" 
+                    : "bg-zinc-900/50 text-zinc-500 hover:text-white border border-white/5"
+                }`}
+              >
+                + Pridať značku
               </button>
             </div>
 
             {activeBrandSubTab === "pridat" ? (
-              <div className="flex flex-col gap-8 items-center">
-                <div className="w-full flex flex-col items-center gap-4">
-                  <span className="text-white font-display text-2xl uppercase tracking-wider">Nahrajte logo</span>
-                  <div 
-                    onClick={() => brandLogoInputRef.current?.click()}
-                    className="w-full aspect-[3/1] border border-emerald-500 rounded-[30px] flex items-center justify-center cursor-pointer overflow-hidden relative"
-                  >
-                    {newBrandLogo ? (
-                      <Image src={newBrandLogo} alt="Logo" fill className="object-contain p-6" />
-                    ) : (
-                      <span className="text-emerald-500 text-7xl font-light">+</span>
-                    )}
+              <div className="bg-zinc-900/30 border border-emerald-500/30 rounded-[30px] p-8 backdrop-blur-sm max-w-[500px]">
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <span className="text-zinc-400 text-[10px] uppercase tracking-widest font-bold ml-2">Logo značky</span>
+                    <div 
+                      onClick={() => brandLogoInputRef.current?.click()}
+                      className="w-full aspect-[2/1] border border-emerald-500/50 border-dashed rounded-2xl flex items-center justify-center cursor-pointer hover:bg-emerald-500/5 transition-colors overflow-hidden relative group"
+                    >
+                      {newBrandLogo ? (
+                        <>
+                          <Image src={newBrandLogo} alt="Logo" fill className="object-contain p-4" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold uppercase tracking-widest">
+                            Zmeniť logo
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <span className="text-emerald-500 text-4xl font-light">+</span>
+                          <span className="text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Nahrať logo</span>
+                        </div>
+                      )}
+                    </div>
+                    <input type="file" ref={brandLogoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                   </div>
-                  <input type="file" ref={brandLogoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
-                </div>
 
-                <div className="w-full flex flex-col items-center gap-4">
-                  <span className="text-white font-display text-2xl uppercase tracking-wider">Váš promo kód:</span>
-                  <input 
-                    type="text" 
-                    value={newBrandCode} 
-                    onChange={(e) => setNewBrandCode(e.target.value)}
-                    className="w-3/4 bg-transparent border border-emerald-500 rounded-2xl px-6 py-4 text-white text-center text-xl font-bold outline-none" 
-                  />
-                </div>
+                  <div className="space-y-3">
+                    <span className="text-zinc-400 text-[10px] uppercase tracking-widest font-bold ml-2">Váš promo kód</span>
+                    <input 
+                      type="text" 
+                      placeholder="Napr. FITBASE10"
+                      value={newBrandCode} 
+                      onChange={(e) => setNewBrandCode(e.target.value)}
+                      className="w-full bg-zinc-950/50 border border-emerald-500/50 rounded-xl px-6 py-4 text-white text-lg font-bold outline-none focus:ring-1 focus:ring-emerald-500 transition-all uppercase placeholder:text-zinc-700" 
+                    />
+                  </div>
 
-                <button 
-                  onClick={handleSaveBrand}
-                  disabled={saving}
-                  className="mt-10 self-end bg-emerald-500 text-black font-display text-2xl px-14 py-3 rounded-full uppercase tracking-widest disabled:opacity-50"
-                >
-                  {saving ? "Ukladám..." : "ULOŽIŤ"}
-                </button>
+                  <div className="pt-4 flex justify-end">
+                    <button 
+                      onClick={handleSaveBrand}
+                      disabled={saving}
+                      className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 px-10 rounded-full text-sm uppercase tracking-widest transition-all disabled:opacity-50 shadow-lg shadow-emerald-500/20"
+                    >
+                      {saving ? "Ukladám..." : "Uložiť značku"}
+                    </button>
+                  </div>
+                </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {brands.length === 0 ? (
-                  <div className="text-zinc-500 italic text-center py-10 text-xl">Zatiaľ nemáte žiadne značky.</div>
+                  <div className="col-span-full bg-zinc-900/20 border border-zinc-800/50 rounded-[30px] py-16 flex flex-col items-center gap-4">
+                    <div className="text-zinc-600 italic">Zatiaľ nemáte pridané žiadne značky.</div>
+                    <button 
+                      onClick={() => setActiveBrandSubTab("pridat")}
+                      className="text-emerald-500 text-[10px] uppercase tracking-widest font-bold hover:text-emerald-400 transition-colors"
+                    >
+                      Pridať prvú značku
+                    </button>
+                  </div>
                 ) : (
                   brands.map((brand) => (
-                    <div key={brand.id} className="flex items-center gap-6">
-                      <div className="flex-1 flex flex-col items-center gap-3">
-                        <span className="text-white font-display text-sm uppercase tracking-wider">Vaše logo</span>
-                        <div className="w-full aspect-[2/1] border border-emerald-500 rounded-2xl overflow-hidden relative">
-                          <Image src={brand.logo} alt="Logo" fill className="object-contain p-4" />
-                        </div>
+                    <div key={brand.id} className="bg-zinc-900/30 border border-emerald-500/30 rounded-[25px] p-5 backdrop-blur-sm group hover:border-emerald-500/50 transition-colors flex flex-col gap-4">
+                      <div className="relative aspect-[2/1] bg-zinc-950/40 rounded-xl overflow-hidden border border-zinc-800 flex items-center justify-center">
+                        <Image src={brand.logo} alt="Logo" fill className="object-contain p-4" />
                       </div>
-                      <div className="flex-1 flex flex-col items-center gap-3">
-                        <span className="text-white font-display text-sm uppercase tracking-wider">Váš promo kód:</span>
-                        <div className="w-full bg-transparent border border-emerald-500 rounded-2xl py-3 text-white text-center text-xl font-bold">
-                          {brand.code}
+                      
+                      <div className="flex items-center justify-between px-1">
+                        <div className="space-y-1">
+                          <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold block">Promo kód</span>
+                          <span className="text-white font-bold text-lg tracking-wide uppercase">{brand.code}</span>
                         </div>
+                        <button 
+                          onClick={() => handleDeleteBrand(brand.id)}
+                          className="px-4 py-2 rounded-full border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-colors text-[10px] uppercase font-bold tracking-widest"
+                        >
+                          Vymazať
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => handleDeleteBrand(brand.id)}
-                        className="bg-emerald-500 text-black font-display text-lg px-8 py-3 rounded-full uppercase tracking-widest hover:bg-emerald-400 transition-colors shrink-0"
-                      >
-                        Vymazať
-                      </button>
                     </div>
                   ))
                 )}
