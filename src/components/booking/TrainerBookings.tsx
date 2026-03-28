@@ -18,16 +18,17 @@ type BookingCategory = "personal_training" | "online_consultation" | "meal_plan"
 
 type TrainerBookingItem = {
   id: string;
-  clientName: string;
-  clientEmail: string | null;
-  clientPhone: string | null;
-  clientNote: string | null;
   startsAt: string;
   endsAt: string;
   status: BookingStatus;
   serviceId: string | null;
   serviceName: string | null;
+  serviceType: string | null;
   category: BookingCategory;
+  clientName: string;
+  clientEmail: string | null;
+  clientPhone: string | null;
+  clientNote: string | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -40,10 +41,16 @@ function isBookingStatus(value: unknown): value is BookingStatus {
   return typeof value === "string" && (bookingStatuses as readonly string[]).includes(value);
 }
 
-function inferBookingCategoryFromServiceName(serviceName: string | null): BookingCategory {
+function inferBookingCategory(serviceType: string | null, serviceName: string | null): BookingCategory {
+  // 1. Priorita: service_type priamo z tabuľky bookings
+  if (serviceType === "online") return "online_consultation";
+  if (serviceType === "personal") return "personal_training";
+
+  // 2. Fallback: inferencia z názvu služby (pôvodná logika)
   const raw = (serviceName || "").toLowerCase();
   if (raw.includes("online") || raw.includes("konzult")) return "online_consultation";
   if (raw.includes("jedál") || raw.includes("jedal") || raw.includes("meal") || raw.includes("plan")) return "meal_plan";
+  
   return "personal_training";
 }
 
@@ -53,6 +60,8 @@ function toTrainerBookingItem(value: unknown): TrainerBookingItem | null {
   const startsAt = value.starts_at;
   const endsAt = value.ends_at;
   const status = value.booking_status;
+  const serviceType = value.service_type;
+
   if (typeof id !== "string" || typeof startsAt !== "string" || typeof endsAt !== "string" || !isBookingStatus(status)) {
     return null;
   }
@@ -70,6 +79,7 @@ function toTrainerBookingItem(value: unknown): TrainerBookingItem | null {
     status,
     serviceId: typeof serviceIdRaw === "string" ? serviceIdRaw : null,
     serviceName: null,
+    serviceType: typeof serviceType === "string" ? serviceType : null,
     category: "personal_training",
     clientName: typeof clientNameRaw === "string" && clientNameRaw.trim() ? clientNameRaw : "Bez mena",
     clientEmail: typeof clientEmailRaw === "string" ? clientEmailRaw : null,
@@ -92,13 +102,15 @@ export default function TrainerBookings({ trainerId }: TrainerBookingsProps) {
     try {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, starts_at, ends_at, booking_status, client_name, client_email, client_phone, client_note, service_id")
+        .select("id, starts_at, ends_at, booking_status, client_name, client_email, client_phone, client_note, service_id, service_type")
         .eq("trainer_id", trainerId)
         .not("booking_status", "in", '("completed","cancelled")')
         .order("starts_at", { ascending: true });
 
       if (error) throw error;
       const payload: unknown = data;
+      console.log("[TrainerBookings] Načítané surové dáta:", payload);
+
       const mapped = Array.isArray(payload) ? payload.map(toTrainerBookingItem).filter((x): x is TrainerBookingItem => x !== null) : [];
 
       const serviceIds = Array.from(new Set(mapped.map((b) => b.serviceId).filter((x): x is string => typeof x === "string")));
@@ -131,10 +143,13 @@ export default function TrainerBookings({ trainerId }: TrainerBookingsProps) {
 
       const enriched = mapped.map((b) => {
         const serviceName = b.serviceId ? serviceNameById.get(b.serviceId) || null : null;
-        // TODO: Ak bude v services dostupný jednoznačný typ/kľúč služby, filtruj podľa neho namiesto inferencie z názvu.
-        const category = inferBookingCategoryFromServiceName(serviceName);
+        const category = inferBookingCategory(b.serviceType, serviceName);
         return { ...b, serviceName, category };
       });
+
+      console.log("[TrainerBookings] Enriched bookings:", enriched.map(b => ({ id: b.id, type: b.serviceType, category: b.category })));
+      console.log("[TrainerBookings] Personal tab:", enriched.filter(b => b.category === "personal_training").length);
+      console.log("[TrainerBookings] Online tab:", enriched.filter(b => b.category === "online_consultation").length);
 
       setBookings(enriched);
     } catch (err: unknown) {
