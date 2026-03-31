@@ -72,51 +72,14 @@ function parseLocation(value: string): { city: string; gym: string } {
   return { city: match[1].trim(), gym: match[2].trim() };
 }
 
-function firstString(value: unknown, keys: string[]): string | null {
-  if (typeof value !== "object" || value === null) return null;
-  const record = value as Record<string, unknown>;
-  for (const k of keys) {
-    const v = record[k];
-    if (typeof v === "string" && v.trim()) return v;
-  }
-  return null;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
-async function fetchFirstWorkingRoute(input: {
-  paths: string[];
-  headers?: Record<string, string>;
-  body?: Record<string, unknown>;
-}): Promise<{ ok: true; payload: unknown } | { ok: false; message: string; status?: number }> {
-  const tryOnce = async (path: string, method: "POST" | "GET") => {
-    const mergedHeaders: Record<string, string> = { ...(input.headers || {}) };
-    if (input.body) mergedHeaders["Content-Type"] = "application/json";
-    const res = await fetch(path, {
-      method,
-      headers: Object.keys(mergedHeaders).length > 0 ? mergedHeaders : undefined,
-      body: input.body ? JSON.stringify(input.body) : undefined,
-    });
-    if (res.status === 404) return { ok: false as const, status: 404, message: "not_found" };
-    if (!res.ok) return { ok: false as const, status: res.status, message: `Request failed (${res.status}).` };
-    const payload: unknown = await res.json().catch(() => null);
-    return { ok: true as const, payload };
-  };
-
-  for (const path of input.paths) {
-    const post = await tryOnce(path, "POST");
-    if (post.ok) return post;
-    if (post.status && post.status !== 404) {
-      const get = await tryOnce(path, "GET");
-      if (get.ok) return get;
-      if (get.status && get.status !== 404) return get;
-    }
-    if (post.status === 404) {
-      const get = await tryOnce(path, "GET");
-      if (get.ok) return get;
-      if (get.status && get.status !== 404) return get;
-    }
-  }
-
-  return { ok: false, message: "Stripe API route neexistuje alebo nie je dostupná.", status: 404 };
+function getStringField(payload: unknown, key: string): string | null {
+  if (!isRecord(payload)) return null;
+  const value = payload[key];
+  return typeof value === "string" && value.trim() ? value : null;
 }
 
 export default function TrainerDashboardPage() {
@@ -216,36 +179,33 @@ export default function TrainerDashboardPage() {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }, []);
 
-  const syncStripeStatusIfAvailable = useCallback(async () => {
-    const headers = await getAuthHeaders();
-    await fetchFirstWorkingRoute({
-      paths: ["/api/stripe/sync", "/api/stripe/sync-status", "/api/stripe/sync-account"],
-      headers,
-    });
-  }, [getAuthHeaders]);
-
   const openStripeOnboarding = useCallback(async () => {
     const headers = await getAuthHeaders();
-    const res = await fetchFirstWorkingRoute({
-      paths: ["/api/stripe/onboarding-link", "/api/onboarding-link"],
-      headers,
-    });
-    if (!res.ok) throw new Error(res.message);
-    const url = firstString(res.payload, ["url", "onboardingUrl", "onboarding_url", "link"]);
-    if (!url) throw new Error("Nepodarilo sa získať onboarding link.");
+    const res = await fetch("/api/stripe/connect/onboarding-link", { method: "POST", headers });
+    const payload: unknown = await res.json().catch(() => null);
+    const url = getStringField(payload, "url");
+    if (!res.ok || !url) {
+      const message = getStringField(payload, "message") || "Nepodarilo sa získať onboarding link.";
+      throw new Error(message);
+    }
     window.location.href = url;
   }, [getAuthHeaders]);
 
   const openStripeDashboard = useCallback(async () => {
     const headers = await getAuthHeaders();
-    const res = await fetchFirstWorkingRoute({
-      paths: ["/api/stripe/dashboard-link", "/api/dashboard-link"],
-      headers,
-    });
-    if (!res.ok) throw new Error(res.message);
-    const url = firstString(res.payload, ["url", "dashboardUrl", "dashboard_url", "link"]);
-    if (!url) throw new Error("Nepodarilo sa získať Stripe dashboard link.");
+    const res = await fetch("/api/stripe/connect/dashboard-link", { method: "POST", headers });
+    const payload: unknown = await res.json().catch(() => null);
+    const url = getStringField(payload, "url");
+    if (!res.ok || !url) {
+      const message = getStringField(payload, "message") || "Nepodarilo sa získať Stripe dashboard link.";
+      throw new Error(message);
+    }
     window.open(url, "_blank", "noopener,noreferrer");
+  }, [getAuthHeaders]);
+
+  const syncStripeAccount = useCallback(async () => {
+    const headers = await getAuthHeaders();
+    await fetch("/api/stripe/connect/sync-account", { method: "POST", headers });
   }, [getAuthHeaders]);
 
   const handleStripeConnect = useCallback(async () => {
@@ -254,26 +214,28 @@ export default function TrainerDashboardPage() {
     setStripeBusy("connect");
     try {
       const headers = await getAuthHeaders();
-      const createRes = await fetchFirstWorkingRoute({
-        paths: ["/api/stripe/create-account", "/api/create-account"],
-        headers,
-      });
-      if (!createRes.ok) throw new Error(createRes.message);
-
-      const maybeOnboardingUrl = firstString(createRes.payload, ["url", "onboardingUrl", "onboarding_url", "link"]);
-      if (maybeOnboardingUrl) {
-        window.location.href = maybeOnboardingUrl;
-        return;
+      const createRes = await fetch("/api/stripe/connect/create-account", { method: "POST", headers });
+      const createPayload: unknown = await createRes.json().catch(() => null);
+      if (!createRes.ok) {
+        const message = getStringField(createPayload, "message") || "Nepodarilo sa vytvoriť Stripe účet.";
+        throw new Error(message);
       }
 
-      await loadProfile();
-      await openStripeOnboarding();
+      const onboardRes = await fetch("/api/stripe/connect/onboarding-link", { method: "POST", headers });
+      const onboardPayload: unknown = await onboardRes.json().catch(() => null);
+      const url = getStringField(onboardPayload, "url");
+      if (!onboardRes.ok || !url) {
+        const message = getStringField(onboardPayload, "message") || "Nepodarilo sa získať onboarding link.";
+        throw new Error(message);
+      }
+
+      window.location.href = url;
     } catch (err: unknown) {
       setStripeError(err instanceof Error ? err.message : "Nepodarilo sa prepojiť Stripe.");
     } finally {
       setStripeBusy(null);
     }
-  }, [getAuthHeaders, loadProfile, openStripeOnboarding, stripeBusy]);
+  }, [getAuthHeaders, stripeBusy]);
 
   const handleStripeOnboarding = useCallback(async () => {
     if (stripeBusy) return;
@@ -316,13 +278,13 @@ export default function TrainerDashboardPage() {
     if (activeTab !== "nastavenia") return;
     if (activeSettingsTab !== "payment_account") return;
     const onFocus = () => {
-      syncStripeStatusIfAvailable()
+      syncStripeAccount()
         .catch(() => {})
         .finally(() => loadProfile());
     };
     const onVisibility = () => {
       if (document.hidden) return;
-      syncStripeStatusIfAvailable()
+      syncStripeAccount()
         .catch(() => {})
         .finally(() => loadProfile());
     };
@@ -332,7 +294,7 @@ export default function TrainerDashboardPage() {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [activeSettingsTab, activeTab, loadProfile, syncStripeStatusIfAvailable]);
+  }, [activeSettingsTab, activeTab, loadProfile, syncStripeAccount]);
 
   useEffect(() => {
     if (!isMobileNavOpen) return;

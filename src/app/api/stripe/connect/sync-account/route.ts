@@ -32,6 +32,10 @@ function stripeErrorMessage(payload: unknown): string | null {
   return typeof msg === "string" && msg.trim() ? msg : null;
 }
 
+function getBoolean(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
+
 export async function POST(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -61,25 +65,27 @@ export async function POST(request: Request) {
 
   const trainerRes = await supabase
     .from("trainers")
-    .select("stripe_account_id")
+    .select("id, stripe_account_id")
     .eq("profile_id", user.id)
-    .maybeSingle<{ stripe_account_id: string | null }>();
+    .maybeSingle<{ id: string; stripe_account_id: string | null }>();
 
   if (trainerRes.error) {
     return NextResponse.json({ ok: false, message: trainerRes.error.message }, { status: 500 });
   }
-  const stripeAccountId = trainerRes.data?.stripe_account_id || null;
-  if (!stripeAccountId) {
-    return NextResponse.json({ ok: false, message: "Stripe účet nie je vytvorený." }, { status: 400 });
+  if (!trainerRes.data?.id) {
+    return NextResponse.json({ ok: false, message: "Používateľ nie je tréner." }, { status: 403 });
   }
 
-  const stripeRes = await fetch(`https://api.stripe.com/v1/accounts/${encodeURIComponent(stripeAccountId)}/login_links`, {
-    method: "POST",
+  const stripeAccountId = trainerRes.data.stripe_account_id;
+  if (!stripeAccountId) {
+    return NextResponse.json({ ok: true, synced: false, message: "Stripe účet nie je vytvorený." });
+  }
+
+  const stripeRes = await fetch(`https://api.stripe.com/v1/accounts/${encodeURIComponent(stripeAccountId)}`, {
+    method: "GET",
     headers: {
       Authorization: `Bearer ${stripeSecretKey}`,
-      "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: new URLSearchParams().toString(),
   });
 
   const stripePayload: unknown = await stripeRes.json().catch(() => null);
@@ -90,14 +96,36 @@ export async function POST(request: Request) {
     );
   }
 
-  const url =
-    isRecord(stripePayload) && typeof stripePayload.url === "string" && stripePayload.url.trim()
-      ? stripePayload.url
-      : null;
+  const chargesEnabled =
+    isRecord(stripePayload) ? getBoolean(stripePayload.charges_enabled) : null;
+  const payoutsEnabled =
+    isRecord(stripePayload) ? getBoolean(stripePayload.payouts_enabled) : null;
+  const detailsSubmitted =
+    isRecord(stripePayload) ? getBoolean(stripePayload.details_submitted) : null;
 
-  if (!url) {
-    return NextResponse.json({ ok: false, message: "Stripe nevrátil dashboard url." }, { status: 500 });
+  const stripe_onboarding_completed = Boolean(detailsSubmitted);
+  const stripe_charges_enabled = Boolean(chargesEnabled);
+  const stripe_payouts_enabled = Boolean(payoutsEnabled);
+
+  const updateRes = await supabase
+    .from("trainers")
+    .update({
+      stripe_onboarding_completed,
+      stripe_charges_enabled,
+      stripe_payouts_enabled,
+    })
+    .eq("id", trainerRes.data.id);
+
+  if (updateRes.error) {
+    return NextResponse.json({ ok: false, message: updateRes.error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, url });
+  return NextResponse.json({
+    ok: true,
+    synced: true,
+    stripe_onboarding_completed,
+    stripe_charges_enabled,
+    stripe_payouts_enabled,
+  });
 }
+
