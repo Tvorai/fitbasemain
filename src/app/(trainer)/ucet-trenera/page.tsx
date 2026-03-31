@@ -16,6 +16,9 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 type TabId = "profil" | "rezervacie" | "sluzby" | "kalendar" | "online-konzultacie" | "recenzie" | "vysledky" | "znacky" | "nastavenia";
 type CalendarTabId = "moj_kalendar" | "nastavenia_kalendara";
 type BrandSubTabId = "pridat" | "zoznam";
+type SettingsTabId = "payment_account";
+
+const settingsTabs: { id: SettingsTabId; label: string }[] = [{ id: "payment_account", label: "Platobný účet" }];
 
 type Brand = {
   id: string;
@@ -57,6 +60,7 @@ export default function TrainerDashboardPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("profil");
   const [activeCalendarTab, setActiveCalendarTab] = useState<CalendarTabId>("moj_kalendar");
+  const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTabId>("payment_account");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const servicesPersistLockRef = useRef(false);
@@ -907,6 +911,39 @@ export default function TrainerDashboardPage() {
                     </div>
                   ))
                 )}
+              </div>
+            )}
+          </div>
+        );
+
+      case "nastavenia":
+        return (
+          <div className="flex flex-col gap-6 w-full max-w-[760px] ml-auto">
+            <div className="flex justify-center">
+              <div className="max-w-full overflow-x-auto overscroll-x-contain">
+                <div className="inline-flex rounded-full bg-zinc-950/60 border border-zinc-800 p-1 whitespace-nowrap">
+                  {settingsTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveSettingsTab(tab.id)}
+                      className={`shrink-0 px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+                        activeSettingsTab === tab.id ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/20" : "text-zinc-300 hover:text-white"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {activeSettingsTab === "payment_account" && (
+              <div className="bg-zinc-900/30 border border-emerald-500/30 rounded-[30px] p-6 md:p-8 backdrop-blur-sm">
+                <div className="text-white font-bold text-lg">Platobný účet</div>
+                <div className="mt-2 text-zinc-400 text-sm">
+                  Stripe / platobný účet zatiaľ nie je v tomto projekte implementovaný.
+                </div>
               </div>
             )}
           </div>
