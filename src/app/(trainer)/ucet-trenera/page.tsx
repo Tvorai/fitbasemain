@@ -503,7 +503,7 @@ export default function TrainerDashboardPage() {
 
             <div className="bg-zinc-900/30 border border-emerald-500/30 rounded-[30px] p-6 md:p-8 backdrop-blur-sm">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <span className="text-zinc-400 text-[10px] uppercase tracking-widest font-bold ml-2">Meno a priezvisko</span>
                   <input
                     type="text"
@@ -514,7 +514,7 @@ export default function TrainerDashboardPage() {
                   />
                 </div>
 
-                <div className="space-y-2 md:col-start-1">
+                <div className="space-y-2">
                   <span className="text-zinc-400 text-[10px] uppercase tracking-widest font-bold ml-2">Mesto</span>
                   <input
                     type="text"
@@ -525,7 +525,7 @@ export default function TrainerDashboardPage() {
                   />
                 </div>
 
-                <div className="space-y-2 md:col-start-1">
+                <div className="space-y-2">
                   <span className="text-zinc-400 text-[10px] uppercase tracking-widest font-bold ml-2">Názov fitka</span>
                   <input
                     type="text"
