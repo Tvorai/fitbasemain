@@ -72,6 +72,18 @@ function isBookingStatus(value: unknown): value is BookingStatus {
   return typeof value === "string" && (bookingStatuses as readonly string[]).includes(value);
 }
 
+function normalizeBookingStatus(status: BookingStatus): BookingStatus {
+  return status === "pending" ? "pending_payment" : status;
+}
+
+function getBookingStatusLabel(status: BookingStatus): string {
+  if (status === "pending_payment") return "Čaká na platbu";
+  if (status === "confirmed") return "Potvrdené";
+  if (status === "completed") return "Dokončené";
+  if (status === "cancelled") return "Zrušené";
+  return status;
+}
+
 function toBookingRow(value: unknown): BookingRow | null {
   if (!isRecord(value)) return null;
   const id = value.id;
@@ -234,13 +246,14 @@ export default function ClientBookings({ userId, userEmail }: ClientBookingsProp
                       serviceTypeRaw === "personal" || serviceTypeRaw === "online" ? serviceTypeRaw : null;
                     if (typeof x.trainerName !== "string") return null;
                     if (!(typeof x.trainerEmail === "string" || x.trainerEmail === null)) return null;
+                    const normalizedStatus = normalizeBookingStatus(x.status);
                     return {
                       kind: "booking",
                       id: x.id,
                       trainerId: x.trainerId,
                       startsAt: x.startsAt,
                       endsAt: x.endsAt,
-                      status: x.status,
+                      status: normalizedStatus,
                       serviceType,
                       trainerName: x.trainerName,
                       trainerEmail: x.trainerEmail,
@@ -335,13 +348,14 @@ export default function ClientBookings({ userId, userEmail }: ClientBookingsProp
         const mappedFromDb: ClientBookingItem[] = rows.map((r: BookingRow) => {
           const contact = contactsByTrainerId.get(r.trainer_id);
           const serviceType = r.service_type === "personal" || r.service_type === "online" ? r.service_type : null;
+          const normalized = isBookingStatus(r.booking_status) ? normalizeBookingStatus(r.booking_status) : "pending_payment";
           return {
             kind: "booking",
             id: r.id,
             trainerId: r.trainer_id,
             startsAt: r.starts_at,
             endsAt: r.ends_at,
-            status: isBookingStatus(r.booking_status) ? r.booking_status : "pending",
+            status: normalized,
             serviceType,
             trainerName: contact?.name || "Neznámy tréner",
             trainerEmail: contact?.email || null,
@@ -371,8 +385,9 @@ export default function ClientBookings({ userId, userEmail }: ClientBookingsProp
       return { ...item, category: "meal_plan" as const, isHistory: item.status === "completed" || item.status === "cancelled" };
     }
     const category = item.serviceType === "online" ? "online_consultation" : "personal_training";
-    const isHistory = item.status === "completed" || item.status === "cancelled";
-    return { ...item, category, isHistory } as const;
+    const normalizedStatus = normalizeBookingStatus(item.status);
+    const isHistory = normalizedStatus === "completed" || normalizedStatus === "cancelled";
+    return { ...item, status: normalizedStatus, category, isHistory } as const;
   });
 
   const filteredItems =
@@ -445,17 +460,25 @@ export default function ClientBookings({ userId, userEmail }: ClientBookingsProp
                 </div>
                 {(() => {
                   const label =
-                    item.status === "confirmed" ? "potvrdené" :
-                    item.status === "pending_payment" ? "čaká" :
-                    item.status === "pending" ? "čaká" :
-                    item.status;
+                    item.kind === "booking"
+                      ? getBookingStatusLabel(item.status)
+                      : item.status;
                   const cls =
-                    item.status === "confirmed" ? "bg-emerald-500/20 text-emerald-500" :
-                    item.status === "pending_payment" ? "bg-yellow-500/20 text-yellow-500" :
-                    item.status === "pending" ? "bg-yellow-500/20 text-yellow-500" :
-                    item.status === "completed" ? "bg-sky-500/20 text-sky-400" :
-                    item.status === "cancelled" ? "bg-red-500/20 text-red-400" :
-                    "bg-zinc-800 text-zinc-500";
+                    item.kind === "booking"
+                      ? item.status === "confirmed"
+                        ? "bg-emerald-500/20 text-emerald-500"
+                        : item.status === "pending_payment"
+                          ? "bg-yellow-500/20 text-yellow-500"
+                          : item.status === "completed"
+                            ? "bg-sky-500/20 text-sky-400"
+                            : item.status === "cancelled"
+                              ? "bg-red-500/20 text-red-400"
+                              : "bg-zinc-800 text-zinc-500"
+                      : item.status === "completed"
+                        ? "bg-sky-500/20 text-sky-400"
+                        : item.status === "cancelled"
+                          ? "bg-red-500/20 text-red-400"
+                          : "bg-zinc-800 text-zinc-500";
                   return (
                     <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase ${cls}`}>
                       {label}

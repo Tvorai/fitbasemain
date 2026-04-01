@@ -74,11 +74,13 @@ function toTrainerBookingItem(value: unknown): TrainerBookingItem | null {
   const clientPhoneRaw = value.client_phone;
   const clientNoteRaw = value.client_note;
 
+  const normalizedStatus: BookingStatus = status === "pending" ? "pending_payment" : status;
+
   return {
     id,
     startsAt,
     endsAt,
-    status,
+    status: normalizedStatus,
     paymentStatus: typeof paymentStatusRaw === "string" ? paymentStatusRaw : null,
     serviceId: typeof serviceIdRaw === "string" ? serviceIdRaw : null,
     serviceName: null,
@@ -92,10 +94,10 @@ function toTrainerBookingItem(value: unknown): TrainerBookingItem | null {
 }
 
 function getStatusLabel(status: BookingStatus, paymentStatus: string | null): string {
-  if (paymentStatus === "paid") return "potvrdené";
-  if (status === "confirmed") return "potvrdené";
-  if (status === "pending_payment") return "čaká";
-  if (status === "pending") return "čaká";
+  if (paymentStatus === "paid" || status === "confirmed") return "Potvrdené";
+  if (status === "pending_payment") return "Čaká na platbu";
+  if (status === "completed") return "Dokončené";
+  if (status === "cancelled") return "Zrušené";
   return status;
 }
 
@@ -115,7 +117,7 @@ export default function TrainerBookings({ trainerId }: TrainerBookingsProps) {
         .from("bookings")
         .select("id, starts_at, ends_at, booking_status, payment_status, client_name, client_email, client_phone, client_note, service_id, service_type")
         .eq("trainer_id", trainerId)
-        .not("booking_status", "in", '("completed","cancelled")')
+        .in("booking_status", ["pending", "pending_payment", "confirmed"])
         .order("starts_at", { ascending: true });
 
       if (error) throw error;
