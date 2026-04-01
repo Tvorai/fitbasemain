@@ -53,7 +53,7 @@ type TrainerRow = {
   stripe_onboarding_completed: boolean | null;
   stripe_charges_enabled: boolean | null;
   stripe_payouts_enabled: boolean | null;
-  profiles: { full_name: string | null } | null;
+  profiles: { full_name: string | null; phone_number?: string | null } | null;
   price_personal_cents?: number | null;
   price_online_cents?: number | null;
 };
@@ -101,6 +101,7 @@ export default function TrainerDashboardPage() {
   const [trainerId, setTrainerId] = useState<string>("");
   const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [city, setCity] = useState("");
   const [gymName, setGymName] = useState("");
   const [bio, setBio] = useState("");
@@ -142,7 +143,7 @@ export default function TrainerDashboardPage() {
 
       const { data: trainer, error } = await supabase
         .from("trainers")
-        .select("*, profiles(full_name)")
+        .select("*, profiles(full_name, phone_number)")
         .eq("profile_id", user.id)
         .maybeSingle<TrainerRow>();
 
@@ -152,6 +153,7 @@ export default function TrainerDashboardPage() {
         setTrainerId(trainer.id);
         setUsername(trainer.slug || "");
         setFullName(trainer.profiles?.full_name || "");
+        setPhoneNumber(typeof trainer.profiles?.phone_number === "string" ? trainer.profiles.phone_number : "");
         const parsedLocation = parseLocation(trainer.city || "");
         setCity(parsedLocation.city);
         setGymName(parsedLocation.gym);
@@ -337,7 +339,7 @@ export default function TrainerDashboardPage() {
       // 1. Update tabuľky profiles (meno)
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({ full_name: fullName })
+        .update({ full_name: fullName, phone_number: phoneNumber.trim() || null })
         .eq("id", user.id);
       
       if (profileError) throw profileError;
@@ -721,6 +723,17 @@ export default function TrainerDashboardPage() {
                     placeholder="Vaše meno a priezvisko"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
+                    className="w-full bg-zinc-950/50 border border-emerald-500/40 rounded-xl px-5 py-4 text-white outline-none focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-700"
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <span className="text-zinc-400 text-[10px] uppercase tracking-widest font-bold ml-2">Telefónne číslo</span>
+                  <input
+                    type="tel"
+                    placeholder="Telefónne číslo"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
                     className="w-full bg-zinc-950/50 border border-emerald-500/40 rounded-xl px-5 py-4 text-white outline-none focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-zinc-700"
                   />
                 </div>

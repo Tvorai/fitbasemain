@@ -17,6 +17,7 @@ export default function UserRegistrationPage() {
   const router = useRouter();
 
   const [fullName, setFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordRepeat, setPasswordRepeat] = useState("");
@@ -87,9 +88,10 @@ export default function UserRegistrationPage() {
                 setStatus(null);
 
                 const safeFullName = fullName.trim();
+                const safePhoneNumber = phoneNumber.trim();
                 const safeEmail = email.trim().toLowerCase();
 
-                if (!safeFullName || !safeEmail || !password || !passwordRepeat) {
+                if (!safeFullName || !safePhoneNumber || !safeEmail || !password || !passwordRepeat) {
                   setStatus({ type: "error", text: "Vyplňte prosím všetky polia." });
                   return;
                 }
@@ -106,6 +108,7 @@ export default function UserRegistrationPage() {
                   headers: { "content-type": "application/json" },
                   body: JSON.stringify({
                     fullName: safeFullName,
+                    phoneNumber: safePhoneNumber,
                     email: safeEmail,
                     password,
                     passwordRepeat,
@@ -185,6 +188,22 @@ export default function UserRegistrationPage() {
                   autoComplete="name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="sr-only" htmlFor="phoneNumber">
+                  Telefónne číslo
+                </label>
+                <input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  type="tel"
+                  placeholder="Telefónne číslo"
+                  className="h-12 w-full rounded-full border border-emerald-500/80 bg-transparent px-5 text-white placeholder-white/70 outline-none ring-emerald-400 focus:ring-2"
+                  autoComplete="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
                 />
               </div>
 

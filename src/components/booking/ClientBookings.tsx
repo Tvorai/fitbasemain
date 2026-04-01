@@ -27,6 +27,7 @@ type ClientBookingItem = {
   trainerId: string;
   trainerName: string;
   trainerEmail: string | null;
+  trainerPhone: string | null;
   trainerSlug: string | null;
 };
 
@@ -38,6 +39,7 @@ type ClientMealPlanItem = {
   trainerId: string;
   trainerName: string;
   trainerEmail: string | null;
+  trainerPhone: string | null;
   trainerSlug: string | null;
 };
 
@@ -118,7 +120,7 @@ function toMealPlanRow(value: unknown): MealPlanRow | null {
   return { id, trainer_id: trainerId, created_at: createdAt, status };
 }
 
-type TrainerContact = { name: string; email: string | null; slug: string | null };
+type TrainerContact = { name: string; email: string | null; phone: string | null; slug: string | null };
 
 function toTrainerContact(value: unknown): { trainerId: string; contact: TrainerContact } | null {
   if (!isRecord(value)) return null;
@@ -129,10 +131,11 @@ function toTrainerContact(value: unknown): { trainerId: string; contact: Trainer
   const profiles = getNested(value, "profiles");
   const fullName = isRecord(profiles) && typeof profiles.full_name === "string" ? profiles.full_name : null;
   const email = isRecord(profiles) && typeof profiles.email === "string" ? profiles.email : null;
+  const phone = isRecord(profiles) && typeof profiles.phone_number === "string" ? profiles.phone_number : null;
 
   return {
     trainerId,
-    contact: { name: fullName && fullName.trim() ? fullName : "Neznámy tréner", email, slug },
+    contact: { name: fullName && fullName.trim() ? fullName : "Neznámy tréner", email, phone, slug },
   };
 }
 
@@ -247,6 +250,9 @@ export default function ClientBookings({ userId, userEmail, kind }: ClientBookin
                       serviceTypeRaw === "personal" || serviceTypeRaw === "online" ? serviceTypeRaw : null;
                     if (typeof x.trainerName !== "string") return null;
                     if (!(typeof x.trainerEmail === "string" || x.trainerEmail === null)) return null;
+                    if (!(typeof (x as Record<string, unknown>).trainerPhone === "string" || (x as Record<string, unknown>).trainerPhone === null || typeof (x as Record<string, unknown>).trainerPhone === "undefined")) return null;
+                    const trainerPhoneRaw = (x as Record<string, unknown>).trainerPhone;
+                    const trainerPhone = typeof trainerPhoneRaw === "string" ? trainerPhoneRaw : null;
                     const normalizedStatus = normalizeBookingStatus(x.status);
                     return {
                       kind: "booking",
@@ -258,6 +264,7 @@ export default function ClientBookings({ userId, userEmail, kind }: ClientBookin
                       serviceType,
                       trainerName: x.trainerName,
                       trainerEmail: x.trainerEmail,
+                      trainerPhone,
                       trainerSlug: null,
                     };
                   }
@@ -268,6 +275,9 @@ export default function ClientBookings({ userId, userEmail, kind }: ClientBookin
                     if (typeof x.status !== "string") return null;
                     if (typeof x.trainerName !== "string") return null;
                     if (!(typeof x.trainerEmail === "string" || x.trainerEmail === null)) return null;
+                    if (!(typeof (x as Record<string, unknown>).trainerPhone === "string" || (x as Record<string, unknown>).trainerPhone === null || typeof (x as Record<string, unknown>).trainerPhone === "undefined")) return null;
+                    const trainerPhoneRaw = (x as Record<string, unknown>).trainerPhone;
+                    const trainerPhone = typeof trainerPhoneRaw === "string" ? trainerPhoneRaw : null;
                     return {
                       kind: "meal_plan",
                       id: x.id,
@@ -276,6 +286,7 @@ export default function ClientBookings({ userId, userEmail, kind }: ClientBookin
                       status: x.status,
                       trainerName: x.trainerName,
                       trainerEmail: x.trainerEmail,
+                      trainerPhone,
                       trainerSlug: null,
                     };
                   }
@@ -334,7 +345,7 @@ export default function ClientBookings({ userId, userEmail, kind }: ClientBookin
         if (trainerIds.length > 0) {
           const trainerRes = await supabase
             .from("trainers")
-            .select("id, slug, profiles(full_name,email)")
+            .select("id, slug, profiles(full_name,email,phone_number)")
             .in("id", trainerIds);
 
           const trainerPayload: unknown = trainerRes.data;
@@ -360,6 +371,7 @@ export default function ClientBookings({ userId, userEmail, kind }: ClientBookin
             serviceType,
             trainerName: contact?.name || "Neznámy tréner",
             trainerEmail: contact?.email || null,
+            trainerPhone: contact?.phone || null,
             trainerSlug: contact?.slug || null,
           };
         });
@@ -521,7 +533,10 @@ export default function ClientBookings({ userId, userEmail, kind }: ClientBookin
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <p className="text-zinc-400">{item.trainerEmail || "Bez kontaktu"}</p>
+                  <div className="min-w-0">
+                    <p className="text-zinc-400 truncate">{item.trainerEmail || "Bez kontaktu"}</p>
+                    {item.trainerPhone ? <p className="text-xs text-zinc-500">{item.trainerPhone}</p> : null}
+                  </div>
                 </div>
 
                 {item.kind === "booking" && item.status === "completed" && (

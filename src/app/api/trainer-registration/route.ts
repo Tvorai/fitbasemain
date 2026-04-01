@@ -5,6 +5,7 @@ type RequestBody = {
   password: string;
   passwordRepeat: string;
   fullName: string;
+  phoneNumber?: string;
   locale?: string;
 };
 
@@ -63,12 +64,13 @@ export async function POST(req: Request) {
   }
 
   const fullName = body.fullName?.trim();
+  const phoneNumber = body.phoneNumber?.trim();
   const email = body.email?.trim().toLowerCase();
   const password = body.password || "";
   const passwordRepeat = body.passwordRepeat || "";
   const locale = (body.locale || "sk").trim();
 
-  if (!fullName || !email || !password || !passwordRepeat) {
+  if (!fullName || !phoneNumber || !email || !password || !passwordRepeat) {
     return json("Vyplňte prosím všetky polia.", 400);
   }
 
@@ -91,6 +93,7 @@ export async function POST(req: Request) {
       emailRedirectTo,
       data: {
         full_name: fullName,
+        phone_number: phoneNumber,
         role: "trainer",
         locale
       }
@@ -116,9 +119,9 @@ export async function POST(req: Request) {
   for (let i = 0; i < 10; i++) {
     const prof = await admin
       .from("profiles")
-      .select("id, role, full_name")
+      .select("id, role, full_name, phone_number")
       .eq("id", userId)
-      .maybeSingle<{ id: string; role: string | null; full_name: string | null }>();
+      .maybeSingle<{ id: string; role: string | null; full_name: string | null; phone_number: string | null }>();
 
     if (!prof.error && prof.data) {
       profileReady = true;
@@ -128,6 +131,9 @@ export async function POST(req: Request) {
           userId,
           role: prof.data.role
         });
+      }
+      if (!prof.data.phone_number || prof.data.phone_number.trim() !== phoneNumber) {
+        await admin.from("profiles").update({ phone_number: phoneNumber }).eq("id", userId);
       }
       break;
     }

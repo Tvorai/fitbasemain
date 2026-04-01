@@ -28,6 +28,7 @@ type UserServiceItem =
       serviceType: string | null;
       trainerName: string;
       trainerEmail: string | null;
+      trainerPhone: string | null;
     }
   | {
       kind: "meal_plan";
@@ -37,6 +38,7 @@ type UserServiceItem =
       status: string;
       trainerName: string;
       trainerEmail: string | null;
+      trainerPhone: string | null;
     };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -76,7 +78,7 @@ function toMealPlanRow(value: unknown): MealPlanRow | null {
   return { id, trainer_id: trainerId, created_at: createdAt, status };
 }
 
-type TrainerContact = { name: string; email: string | null };
+type TrainerContact = { name: string; email: string | null; phone: string | null };
 
 function toTrainerContact(value: unknown): { trainerId: string; contact: TrainerContact } | null {
   if (!isRecord(value)) return null;
@@ -86,10 +88,11 @@ function toTrainerContact(value: unknown): { trainerId: string; contact: Trainer
   const profiles = value.profiles;
   const fullName = isRecord(profiles) && typeof profiles.full_name === "string" ? profiles.full_name : null;
   const email = isRecord(profiles) && typeof profiles.email === "string" ? profiles.email : null;
+  const phone = isRecord(profiles) && typeof profiles.phone_number === "string" ? profiles.phone_number : null;
 
   return {
     trainerId,
-    contact: { name: fullName && fullName.trim() ? fullName : "Neznámy tréner", email },
+    contact: { name: fullName && fullName.trim() ? fullName : "Neznámy tréner", email, phone },
   };
 }
 
@@ -170,7 +173,10 @@ export async function GET(request: Request) {
   const contactsByTrainerId = new Map<string, TrainerContact>();
 
   if (trainerIds.length > 0) {
-    const trainerRes = await supabase.from("trainers").select("id, profiles(full_name,email)").in("id", trainerIds);
+    const trainerRes = await supabase
+      .from("trainers")
+      .select("id, profiles(full_name,email,phone_number)")
+      .in("id", trainerIds);
     if (trainerRes.error) {
       console.error("[api/user/bookings] trainers query error:", trainerRes.error);
     } else {
@@ -197,6 +203,7 @@ export async function GET(request: Request) {
         serviceType: r.service_type,
         trainerName: contact?.name || "Neznámy tréner",
         trainerEmail: contact?.email || null,
+        trainerPhone: contact?.phone || null,
       };
     }),
     ...mealPlanRows.map((r) => {
@@ -209,6 +216,7 @@ export async function GET(request: Request) {
         status: r.status,
         trainerName: contact?.name || "Neznámy tréner",
         trainerEmail: contact?.email || null,
+        trainerPhone: contact?.phone || null,
       };
     }),
   ];

@@ -5,6 +5,7 @@ type RequestBody = {
   password: string;
   passwordRepeat: string;
   fullName: string;
+  phoneNumber?: string;
   locale?: string;
 };
 
@@ -26,6 +27,7 @@ function mapSignupErrorToSk(message: string) {
 export async function POST(req: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
   if (!supabaseUrl || !supabaseAnonKey) {
@@ -40,12 +42,13 @@ export async function POST(req: Request) {
   }
 
   const fullName = body.fullName?.trim();
+  const phoneNumber = body.phoneNumber?.trim();
   const email = body.email?.trim().toLowerCase();
   const password = body.password || "";
   const passwordRepeat = body.passwordRepeat || "";
   const locale = (body.locale || "sk").trim();
 
-  if (!fullName || !email || !password || !passwordRepeat) {
+  if (!fullName || !phoneNumber || !email || !password || !passwordRepeat) {
     return json("Vyplňte prosím všetky polia.", 400);
   }
 
@@ -68,6 +71,7 @@ export async function POST(req: Request) {
       emailRedirectTo,
       data: {
         full_name: fullName,
+        phone_number: phoneNumber,
         locale
       }
     }
@@ -77,7 +81,24 @@ export async function POST(req: Request) {
     return json(mapSignupErrorToSk(signup.error.message), 400, { code: signup.error.code });
   }
 
+  const userId = signup.data.user?.id;
+  if (userId && serviceRoleKey) {
+    const admin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+
+    for (let i = 0; i < 10; i++) {
+      const updateRes = await admin
+        .from("profiles")
+        .update({ phone_number: phoneNumber })
+        .eq("id", userId);
+
+      if (!updateRes.error) break;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
+
   return json("Registrácia prebehla úspešne. Skontrolujte e-mail pre potvrdenie účtu.", 200, {
-    userId: signup.data.user?.id ?? null
+    userId: userId ?? null
   });
 }
