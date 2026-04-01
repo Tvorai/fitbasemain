@@ -117,11 +117,18 @@ export default function BookingForm({
       }
       setAccountEmail(typeof user.email === "string" ? user.email : null);
       try {
-        const res = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle<{ full_name: string | null }>();
+        const res = await supabase
+          .from("profiles")
+          .select("full_name, phone_number")
+          .eq("id", user.id)
+          .maybeSingle<{ full_name: string | null; phone_number: string | null }>();
         const full = res.data?.full_name;
+        const phone = res.data?.phone_number;
         setAccountName(full && full.trim() ? full : null);
+        setAccountPhone(phone && phone.trim() ? phone : null);
       } catch {
         setAccountName(null);
+        setAccountPhone(null);
       }
     });
   }, [supabase]);
