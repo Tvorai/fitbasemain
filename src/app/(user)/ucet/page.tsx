@@ -28,6 +28,7 @@ export default function UserAccountPage() {
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
 
   const handleLogout = async () => {
     try {
@@ -80,11 +81,12 @@ export default function UserAccountPage() {
 
       const prof = await supabase
         .from("profiles")
-        .select("full_name")
+        .select("full_name, phone_number")
         .eq("id", user.id)
-        .maybeSingle<{ full_name: string | null }>();
+        .maybeSingle<{ full_name: string | null; phone_number: string | null }>();
 
       if (!prof.error && prof.data?.full_name) setFullName(prof.data.full_name);
+      if (!prof.error && typeof prof.data?.phone_number === "string") setPhoneNumber(prof.data.phone_number);
     } finally {
       setLoading(false);
     }
@@ -122,7 +124,7 @@ export default function UserAccountPage() {
 
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName.trim() })
+        .update({ full_name: fullName.trim(), phone_number: phoneNumber.trim() || null })
         .eq("id", user.id);
 
       if (error) throw error;
@@ -164,6 +166,16 @@ export default function UserAccountPage() {
                   value={email}
                   disabled
                   className="w-full bg-transparent border border-emerald-500/50 rounded-xl px-6 py-3 text-white/70 outline-none"
+                />
+              </div>
+
+              <div className="relative w-full">
+                <span className="block text-white font-display text-2xl tracking-wide mb-2">Telefónne číslo</span>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="w-full bg-transparent border border-emerald-500 rounded-xl px-6 py-3 text-white outline-none focus:ring-1 focus:ring-emerald-500 transition-all"
                 />
               </div>
             </div>
