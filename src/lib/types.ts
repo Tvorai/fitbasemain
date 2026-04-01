@@ -19,7 +19,7 @@ export type Slot = {
 };
 
 // Nové typy pre statusy rezervácie a platby (upravené podľa existujúcej DB schémy bookings)
-export type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
+export type BookingStatus = "pending" | "pending_payment" | "confirmed" | "completed" | "cancelled";
 export type PaymentStatus = "unpaid" | "paid" | "failed" | "refunded";
 
 export type Booking = {

@@ -66,7 +66,7 @@ type MealPlanRow = {
   status: string;
 };
 
-const bookingStatuses: readonly BookingStatus[] = ["pending", "confirmed", "completed", "cancelled"];
+const bookingStatuses: readonly BookingStatus[] = ["pending", "pending_payment", "confirmed", "completed", "cancelled"];
 
 function isBookingStatus(value: unknown): value is BookingStatus {
   return typeof value === "string" && (bookingStatuses as readonly string[]).includes(value);

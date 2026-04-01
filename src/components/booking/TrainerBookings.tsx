@@ -35,7 +35,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-const bookingStatuses: readonly BookingStatus[] = ["pending", "confirmed", "completed", "cancelled"];
+const bookingStatuses: readonly BookingStatus[] = ["pending", "pending_payment", "confirmed", "completed", "cancelled"];
 
 function isBookingStatus(value: unknown): value is BookingStatus {
   return typeof value === "string" && (bookingStatuses as readonly string[]).includes(value);
@@ -163,8 +163,10 @@ export default function TrainerBookings({ trainerId }: TrainerBookingsProps) {
     void fetchBookings();
   }, [fetchBookings]);
 
+  type UpdatableBookingStatus = "completed" | "cancelled";
+
   const updateBookingStatus = useCallback(
-    async (bookingId: string, status: BookingStatus) => {
+    async (bookingId: string, status: UpdatableBookingStatus) => {
       console.log("[TrainerBookings] action click:", { bookingId, status });
       setError(null);
       setUpdatingId(bookingId);

@@ -43,7 +43,7 @@ export default function TrainerCalendar({
           .select("*")
           .eq("trainer_id", trainerId)
           .eq("service_type", serviceType)
-          .in("booking_status", ["confirmed", "pending"]);
+          .in("booking_status", ["confirmed", "pending_payment"]);
 
         if (error) throw error;
         setBookings(data || []);

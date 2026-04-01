@@ -152,6 +152,17 @@ export async function getAvailableSlots(
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  const fifteenMinutesAgoIso = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  try {
+    await supabase
+      .from("bookings")
+      .update({ booking_status: "cancelled" })
+      .eq("trainer_id", trainerId)
+      .eq("booking_status", "pending_payment")
+      .lt("created_at", fifteenMinutesAgoIso);
+  } catch {
+  }
+
   const now = new Date();
   const timeZone = "Europe/Bratislava";
   const todayInTz = getDatePartsInTimeZone(now, timeZone);
@@ -177,7 +188,7 @@ export async function getAvailableSlots(
 
   console.log(`[getAvailableSlots] Načítanie bookings pre serviceType: ${serviceType}...`);
   // 2. Načítanie existujúcich aktívnych rezervácií v danom časovom rozsahu pre daný typ služby
-  const activeBookingStatuses: BookingStatus[] = ["pending", "confirmed"];
+  const activeBookingStatuses: BookingStatus[] = ["pending_payment", "confirmed"];
   const { data: bookings, error: bookingsError } = await supabase
     .from("bookings")
     .select("starts_at, ends_at")

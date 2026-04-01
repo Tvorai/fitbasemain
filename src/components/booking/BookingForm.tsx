@@ -92,6 +92,7 @@ export default function BookingForm({
   const [formState, setFormState] = useState<BookingFormState>({ status: "idle" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [isRedirectingToPayment, setIsRedirectingToPayment] = useState(false);
 
   const supabase = useMemo(() => {
     return featureFlags.supabaseEnabled ? createClient(supabaseUrl, supabaseAnonKey) : null;
@@ -142,7 +143,6 @@ export default function BookingForm({
       setFormState(result);
       if (result.status === "success") {
         sessionStorage.removeItem(PENDING_KEY);
-        if (onSuccess) setTimeout(() => onSuccess(), 3000);
       }
     } catch {
       setFormState({ status: "error", message: "Nastala neočakávaná chyba pri komunikácii so serverom." });
@@ -206,15 +206,71 @@ export default function BookingForm({
 
   if (formState.status === "success") {
     return (
-      <div className="p-6 bg-emerald-900/20 border border-emerald-500/50 rounded-xl text-center">
-        <div className="mb-4 text-emerald-500">
+      <div className="p-6 bg-emerald-900/20 border border-emerald-500/50 rounded-xl text-center space-y-4">
+        <div className="text-emerald-500">
           <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
           </svg>
         </div>
         <h3 className="text-xl font-bold text-emerald-400 mb-2">Rezervácia bola úspešná!</h3>
         <p className="text-zinc-300">{formState.message}</p>
-        <p className="mt-4 text-xs text-emerald-500/70">Potvrdzovací email bol odoslaný na vašu adresu.</p>
+
+        <div className="flex gap-3 justify-center pt-2">
+          <button
+            type="button"
+            disabled={isRedirectingToPayment}
+            onClick={async () => {
+              if (!supabase) {
+                setFormState({ status: "error", message: "Auth nie je dostupný." });
+                return;
+              }
+              setIsRedirectingToPayment(true);
+              try {
+                const sessionRes = await supabase.auth.getSession();
+                const accessToken = sessionRes.data.session?.access_token;
+                if (!accessToken) {
+                  setFormState({ status: "error", message: "Pre platbu sa musíte prihlásiť." });
+                  setIsRedirectingToPayment(false);
+                  return;
+                }
+
+                const res = await fetch("/api/stripe/checkout/create-session", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ booking_id: formState.bookingId, access_token: accessToken }),
+                });
+                const payload: unknown = await res.json().catch(() => null);
+                const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
+                const url = isRecord(payload) && typeof payload.url === "string" ? payload.url : null;
+                if (!res.ok || !url) {
+                  const message = isRecord(payload) && typeof payload.message === "string" ? payload.message : "Nepodarilo sa spustiť platbu.";
+                  setFormState({ status: "error", message });
+                  setIsRedirectingToPayment(false);
+                  return;
+                }
+
+                if (onSuccess) onSuccess();
+                window.location.href = url;
+              } catch {
+                setFormState({ status: "error", message: "Nastala neočakávaná chyba pri spustení platby." });
+                setIsRedirectingToPayment(false);
+              }
+            }}
+            className="flex-[2] py-3 px-6 bg-emerald-500 text-black rounded-xl font-bold hover:bg-emerald-400 disabled:bg-emerald-900/50 disabled:text-zinc-500 disabled:cursor-not-allowed transition-colors uppercase tracking-widest"
+          >
+            {isRedirectingToPayment ? "Presmerovávam..." : "Zaplatiť"}
+          </button>
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={isRedirectingToPayment}
+              className="flex-1 py-3 px-4 border border-zinc-700 text-zinc-400 rounded-xl hover:bg-zinc-800 transition-colors font-bold uppercase text-xs disabled:opacity-50"
+            >
+              Zavrieť
+            </button>
+          )}
+        </div>
       </div>
     );
   }

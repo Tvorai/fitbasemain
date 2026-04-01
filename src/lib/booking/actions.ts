@@ -27,7 +27,7 @@ const bookingSchema = z.object({
 
 export type BookingFormState = 
   | { status: "idle" }
-  | { status: "success"; message: string }
+  | { status: "success"; message: string; bookingId: string }
   | { status: "error"; message: string };
 
 function getErrorMessage(error: unknown): string {
@@ -53,6 +53,8 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
   } = validatedFields.data;
 
   const normalizedServiceType: "personal" | "online" = service_type === "online" ? "online" : "personal";
+  const priceCents = normalizedServiceType === "online" ? 3000 : 5000;
+  const currency = "eur";
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -107,8 +109,7 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
 
     // 2. Kontrola, či slot už nie je obsadený (Race condition protection na serveri)
     // Hľadáme aktívne rezervácie (nie zrušené), ktoré sa prekrývajú s vybraným časom.
-    // POZNÁMKA: "pending_payment" vynechaný, kým nebude pridaný do DB enumu
-    const activeStatuses: BookingStatus[] = ["pending", "confirmed"];
+    const activeStatuses: BookingStatus[] = ["pending_payment", "confirmed"];
     const { data: overlaps, error: checkError } = await supabase
       .from("bookings")
       .select("id")
@@ -136,6 +137,9 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
       client_phone: string | null | undefined;
       client_note: string | null | undefined;
       booking_status: BookingStatus;
+      payment_status: "unpaid";
+      price_cents: number;
+      currency: string;
       service_type: string;
     } = {
       trainer_id,
@@ -146,7 +150,10 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
       client_email,
       client_phone,
       client_note: note,
-      booking_status: "confirmed" as BookingStatus,
+      booking_status: "pending_payment",
+      payment_status: "unpaid",
+      price_cents: priceCents,
+      currency,
       service_type: normalizedServiceType,
     };
     if (service_id) insertPayload.service_id = service_id;
@@ -167,6 +174,9 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
           client_phone: string | null | undefined;
           note: string | null | undefined;
           booking_status: BookingStatus;
+          payment_status: "unpaid";
+          price_cents: number;
+          currency: string;
           service_type: string;
         } = {
           trainer_id,
@@ -177,7 +187,10 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
           client_email,
           client_phone,
           note,
-          booking_status: "confirmed" as BookingStatus,
+          booking_status: "pending_payment",
+          payment_status: "unpaid",
+          price_cents: priceCents,
+          currency,
           service_type: normalizedServiceType,
         };
         if (service_id) fallbackPayload.service_id = service_id;
@@ -194,35 +207,11 @@ export async function createBookingAction(formData: z.infer<typeof bookingSchema
       return { status: "error", message: insertResult.error.message || "Nepodarilo sa vytvoriť rezerváciu." };
     }
 
-    // 4. Odoslanie emailov (Asynchrónne, neblokujeme odpoveď)
-    const dateFormatted = new Date(starts_at).toLocaleString("sk-SK", {
-      timeZone: "Europe/Bratislava",
-      weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit"
-    });
-
-    // Email klientovi
-    sendEmail({
-      to: client_email,
-      subject: `Potvrdenie rezervácie - Fitbase`,
-      html: getClientConfirmationEmailHtml(
-        client_name,
-        dateFormatted,
-        trainer_name || "Tréner",
-        trainer_email || null,
-        undefined
-      )
-    }).catch((err: unknown) => console.error("Chyba pri odosielaní emailu klientovi:", getErrorMessage(err)));
-
-    // Email adminovi (ak máme email)
-    if (trainer_email) {
-      sendEmail({
-        to: trainer_email,
-        subject: `Nová rezervácia - ${client_name}`,
-        html: getAdminNotificationEmailHtml(client_name, client_email, client_phone || null, dateFormatted, note || null, undefined)
-      }).catch((err: unknown) => console.error("Chyba pri odosielaní emailu adminovi:", getErrorMessage(err)));
+    if (!insertResult.data?.id) {
+      return { status: "error", message: "Rezerváciu sa nepodarilo vytvoriť." };
     }
 
-    return { status: "success", message: "Rezervácia bola úspešne vytvorená. Čoskoro vás budeme kontaktovať." };
+    return { status: "success", message: "Rezervácia bola vytvorená. Dokončite platbu pre potvrdenie.", bookingId: insertResult.data.id };
 
   } catch (error: unknown) {
     console.error("Chyba pri vytváraní rezervácie:", error);
