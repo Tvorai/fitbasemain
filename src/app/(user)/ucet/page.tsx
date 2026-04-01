@@ -11,7 +11,7 @@ import ClientBookings from "@/components/booking/ClientBookings";
 
 const supabase = featureFlags.supabaseEnabled ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
-type TabId = "profil" | "sluzby" | "historia";
+type TabId = "profil" | "sluzby" | "meal_plan" | "historia";
 
 export default function UserAccountPage() {
   const router = useRouter();
@@ -193,7 +193,14 @@ export default function UserAccountPage() {
       case "sluzby":
         return (
           <div className="flex flex-col gap-6 w-full max-w-[760px] ml-auto">
-            <ClientBookings userId={userId} userEmail={email} />
+            <ClientBookings userId={userId} userEmail={email} kind="booking" />
+          </div>
+        );
+
+      case "meal_plan":
+        return (
+          <div className="flex flex-col gap-6 w-full max-w-[760px] ml-auto">
+            <ClientBookings userId={userId} userEmail={email} kind="meal_plan" />
           </div>
         );
 
@@ -222,7 +229,8 @@ export default function UserAccountPage() {
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "profil", label: "Môj profil" },
-    { id: "sluzby", label: "Zakúpené služby" },
+    { id: "sluzby", label: "Moje tréningy" },
+    { id: "meal_plan", label: "Môj jedálniček" },
     { id: "historia", label: "História" }
   ];
 

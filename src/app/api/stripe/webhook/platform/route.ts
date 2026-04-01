@@ -50,14 +50,76 @@ export async function POST(request: Request) {
     const session = event.data.object as Stripe.Checkout.Session;
     const meta: Record<string, unknown> = isRecord(session.metadata) ? session.metadata : {};
     
+    const type = getStringField(meta, "type") || getStringField(meta, "service_type");
+    const stripePaymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : null;
+
+    if (type === "meal_plan") {
+      // FLOW PRE JEDALNICEK
+      const trainerId = getStringField(meta, "trainer_id");
+      const userId = getStringField(meta, "user_id");
+      const clientName = getStringField(meta, "client_name");
+      const clientEmail = getStringField(meta, "client_email");
+      const clientPhone = getStringField(meta, "client_phone");
+      const goal = getStringField(meta, "goal");
+      const heightCm = getStringField(meta, "height_cm");
+      const age = getStringField(meta, "age");
+      const gender = getStringField(meta, "gender");
+      const allergens = getStringField(meta, "allergens");
+      const favoriteFoods = getStringField(meta, "favorite_foods");
+      const priceCentsRaw = getStringField(meta, "price_cents");
+      const priceCents = priceCentsRaw ? Number(priceCentsRaw) : null;
+
+      // Idempotencia - skontrolovať či už existuje meal plan s touto session
+      const { data: existingMealPlan } = await supabase
+        .from("meal_plan_requests")
+        .select("id")
+        .eq("stripe_checkout_session_id", session.id)
+        .maybeSingle();
+
+      if (existingMealPlan) {
+        return NextResponse.json({ received: true, action: "none", message: "Meal plan already exists" });
+      }
+
+      const insertPayload: Record<string, unknown> = {
+        trainer_id: trainerId,
+        client_profile_id: userId,
+        name: clientName,
+        email: clientEmail,
+        phone: clientPhone,
+        goal: goal,
+        height_cm: heightCm ? Number(heightCm) : null,
+        age: age ? Number(age) : null,
+        gender: gender,
+        allergens: allergens,
+        favorite_foods: favoriteFoods,
+        status: "confirmed",
+        payment_status: "paid",
+        price_cents: priceCents,
+        currency: "eur",
+        stripe_checkout_session_id: session.id,
+        stripe_payment_intent_id: stripePaymentIntentId,
+      };
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from("meal_plan_requests")
+        .insert(insertPayload)
+        .select("id")
+        .maybeSingle();
+
+      if (insertErr) {
+        console.error("[Platform Webhook] Error inserting meal plan:", insertErr.message);
+        return NextResponse.json({ message: insertErr.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ received: true, action: "inserted_meal_plan", id: inserted?.id });
+    }
+
+    // POVODNY FLOW PRE BOOKINGY
     const bookingIdFromMeta = getStringField(meta, "booking_id");
     const trainerId = getStringField(meta, "trainer_id");
     const userId = getStringField(meta, "user_id");
     const startsAt = getStringField(meta, "starts_at");
     const endsAt = getStringField(meta, "ends_at");
-    const type = getStringField(meta, "type") || getStringField(meta, "service_type");
-
-    const stripePaymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : null;
 
     // 1. Skúsime nájsť existujúci booking podľa session.id alebo bookingIdFromMeta
     let existingBookingId: string | null = null;
@@ -154,6 +216,26 @@ export async function POST(request: Request) {
   if (event.type === "payment_intent.succeeded") {
     const pi = event.data.object as Stripe.PaymentIntent;
     const meta: Record<string, unknown> = isRecord(pi.metadata) ? pi.metadata : {};
+    const type = getStringField(meta, "type");
+
+    if (type === "meal_plan") {
+      // Potvrdenie platby pre meal plan ak by náhodou checkout session zlyhala
+      // Alebo ak sa používa oddelený flow
+      const { error: updateErr } = await supabase
+        .from("meal_plan_requests")
+        .update({
+          payment_status: "paid",
+          stripe_payment_intent_id: pi.id,
+        })
+        .eq("stripe_payment_intent_id", pi.id) // Alebo iný link ak existuje
+        .is("payment_status", "unpaid");
+      
+      if (updateErr) {
+        console.error("[Platform Webhook] Error updating meal plan PI status:", updateErr.message);
+      }
+      return NextResponse.json({ received: true, type: "payment_intent.succeeded_meal_plan" });
+    }
+
     const bookingIdFromMeta = getStringField(meta, "booking_id");
 
     if (bookingIdFromMeta) {

@@ -14,6 +14,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 interface ClientBookingsProps {
   userId: string;
   userEmail: string;
+  kind?: "booking" | "meal_plan";
 }
 
 type ClientBookingItem = {
@@ -178,12 +179,12 @@ async function resizeImageDataUrl(dataUrl: string, maxSize: number = 1024): Prom
   return canvas.toDataURL("image/jpeg", 0.85);
 }
 
-export default function ClientBookings({ userId, userEmail }: ClientBookingsProps) {
+export default function ClientBookings({ userId, userEmail, kind }: ClientBookingsProps) {
   const router = useRouter();
   const [items, setItems] = useState<ClientServiceItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<
     "personal_training" | "online_consultation" | "meal_plan" | "history"
-  >("personal_training");
+  >(kind === "meal_plan" ? "meal_plan" : "personal_training");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);

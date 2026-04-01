@@ -7,14 +7,21 @@ export const runtime = "nodejs";
 
 const bodySchema = z.object({
   trainer_id: z.string().uuid(),
-  starts_at: z.string().datetime(),
-  ends_at: z.string().datetime(),
-  service_type: z.enum(["personal", "online"]),
+  starts_at: z.string().datetime().optional(),
+  ends_at: z.string().datetime().optional(),
+  service_type: z.enum(["personal", "online", "meal_plan"]),
   client_name: z.string().min(2),
   client_email: z.string().email(),
   client_phone: z.string().nullable().optional(),
   note: z.string().nullable().optional(),
   access_token: z.string().min(1),
+  // Dodatočné polia pre meal plan ak sú potrebné
+  goal: z.string().optional(),
+  height_cm: z.number().optional(),
+  age: z.number().optional(),
+  gender: z.string().optional(),
+  allergens: z.string().optional(),
+  favorite_foods: z.string().optional(),
 });
 
 type TrainerRow = {
@@ -22,6 +29,7 @@ type TrainerRow = {
   stripe_account_id: string | null;
   price_personal_cents: number | null;
   price_online_cents: number | null;
+  price_meal_plan_cents: number | null;
 };
 
 function getDateTimePartsInBratislava(iso: string): { date: string; time: string } {
@@ -31,8 +39,10 @@ function getDateTimePartsInBratislava(iso: string): { date: string; time: string
   return { date, time };
 }
 
-function getServiceLabel(serviceType: "personal" | "online"): string {
-  return serviceType === "online" ? "Online konzultácia" : "Osobný tréning";
+function getServiceLabel(serviceType: "personal" | "online" | "meal_plan"): string {
+  if (serviceType === "online") return "Online konzultácia";
+  if (serviceType === "meal_plan") return "Jedálniček na mieru";
+  return "Osobný tréning";
 }
 
 export async function POST(request: Request) {
@@ -66,7 +76,7 @@ export async function POST(request: Request) {
 
   const trainerRes = await supabase
     .from("trainers")
-    .select("id, stripe_account_id, price_personal_cents, price_online_cents")
+    .select("id, stripe_account_id, price_personal_cents, price_online_cents, price_meal_plan_cents")
     .eq("id", input.trainer_id)
     .maybeSingle<TrainerRow>();
 
@@ -80,27 +90,66 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Tréner nemá prepojený Stripe účet." }, { status: 400 });
   }
 
-  const priceCents =
-    input.service_type === "online" ? trainerRes.data.price_online_cents : trainerRes.data.price_personal_cents;
+  let priceCents = 0;
+  if (input.service_type === "online") {
+    priceCents = trainerRes.data.price_online_cents || 0;
+  } else if (input.service_type === "meal_plan") {
+    priceCents = trainerRes.data.price_meal_plan_cents || 0;
+  } else {
+    priceCents = trainerRes.data.price_personal_cents || 0;
+  }
+
   if (typeof priceCents !== "number" || !Number.isInteger(priceCents) || priceCents <= 0) {
     return NextResponse.json({ message: "Tréner nemá nastavenú cenu pre túto službu." }, { status: 400 });
   }
 
-  const overlapRes = await supabase
-    .from("bookings")
-    .select("id")
-    .eq("trainer_id", input.trainer_id)
-    .eq("service_type", input.service_type)
-    .in("booking_status", ["confirmed", "pending_payment"])
-    .lt("starts_at", input.ends_at)
-    .gt("ends_at", input.starts_at)
-    .limit(1);
-  if (!overlapRes.error && Array.isArray(overlapRes.data) && overlapRes.data.length > 0) {
-    return NextResponse.json({ message: "Tento termín už nie je dostupný." }, { status: 409 });
+  if (input.service_type !== "meal_plan") {
+    if (!input.starts_at || !input.ends_at) {
+      return NextResponse.json({ message: "Chýba časový rozsah pre rezerváciu." }, { status: 400 });
+    }
+    const overlapRes = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("trainer_id", input.trainer_id)
+      .eq("service_type", input.service_type)
+      .in("booking_status", ["confirmed", "pending_payment"])
+      .lt("starts_at", input.ends_at)
+      .gt("ends_at", input.starts_at)
+      .limit(1);
+    if (!overlapRes.error && Array.isArray(overlapRes.data) && overlapRes.data.length > 0) {
+      return NextResponse.json({ message: "Tento termín už nie je dostupný." }, { status: 409 });
+    }
   }
 
-  const { date, time } = getDateTimePartsInBratislava(input.starts_at);
+  const { date, time } = input.starts_at ? getDateTimePartsInBratislava(input.starts_at) : { date: "", time: "" };
   const stripe = new Stripe(stripeSecretKey);
+
+  const metadata: Record<string, string> = {
+    trainer_id: input.trainer_id,
+    user_id: authUser.id,
+    type: input.service_type,
+    client_name: input.client_name,
+    client_email: input.client_email,
+    client_phone: input.client_phone || "",
+    note: input.note || "",
+    price_cents: String(priceCents),
+    currency: "eur",
+  };
+
+  if (input.starts_at) metadata.starts_at = input.starts_at;
+  if (input.ends_at) metadata.ends_at = input.ends_at;
+  if (date) metadata.date = date;
+  if (time) metadata.time = time;
+
+  // Meal plan specific metadata
+  if (input.service_type === "meal_plan") {
+    if (input.goal) metadata.goal = input.goal;
+    if (input.height_cm) metadata.height_cm = String(input.height_cm);
+    if (input.age) metadata.age = String(input.age);
+    if (input.gender) metadata.gender = input.gender;
+    if (input.allergens) metadata.allergens = input.allergens;
+    if (input.favorite_foods) metadata.favorite_foods = input.favorite_foods;
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -117,28 +166,12 @@ export async function POST(request: Request) {
     success_url: `https://fitbasemain.vercel.app/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: "https://fitbasemain.vercel.app/cancel",
     customer_email: input.client_email,
-    metadata: {
-      trainer_id: input.trainer_id,
-      user_id: authUser.id,
-      date,
-      time,
-      type: input.service_type,
-      starts_at: input.starts_at,
-      ends_at: input.ends_at,
-      client_name: input.client_name,
-      client_email: input.client_email,
-      client_phone: input.client_phone || "",
-      note: input.note || "",
-      price_cents: String(priceCents),
-      currency: "eur",
-    },
+    metadata,
     payment_intent_data: {
       transfer_data: { destination: trainerRes.data.stripe_account_id },
       metadata: {
         trainer_id: input.trainer_id,
         user_id: authUser.id,
-        date,
-        time,
         type: input.service_type,
       },
     },

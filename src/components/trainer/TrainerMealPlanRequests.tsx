@@ -20,6 +20,8 @@ interface MealPlanRequest {
   allergens: string | null;
   favorite_foods: string | null;
   status: string;
+  payment_status: string | null;
+  price_cents: number | null;
   created_at: string;
 }
 
@@ -42,7 +44,7 @@ export default function TrainerMealPlanRequests({ trainerId }: TrainerMealPlanRe
         .from("meal_plan_requests")
         .select("*")
         .eq("trainer_id", trainerId)
-        .not("status", "in", '("completed","cancelled")')
+        .in("status", ["new", "confirmed", "in_progress", "pending_payment"])
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -103,6 +105,7 @@ export default function TrainerMealPlanRequests({ trainerId }: TrainerMealPlanRe
             <th className="px-6 py-4">Klient</th>
             <th className="px-6 py-4">Cieľ a parametre</th>
             <th className="px-6 py-4">Preferencie</th>
+            <th className="px-6 py-4">Cena</th>
             <th className="px-6 py-4">Status</th>
             <th className="px-6 py-4">Dátum</th>
             <th className="px-6 py-4 text-right"></th>
@@ -137,14 +140,20 @@ export default function TrainerMealPlanRequests({ trainerId }: TrainerMealPlanRe
                 )}
                 {!request.allergens && !request.favorite_foods && <span className="italic">Žiadne špeciálne požiadavky</span>}
               </td>
+              <td className="px-6 py-4 text-white font-bold">
+                {request.price_cents ? `${(request.price_cents / 100).toFixed(2)} €` : "—"}
+              </td>
               <td className="px-6 py-4">
                 <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
-                  request.status === "new" ? "bg-yellow-500/20 text-yellow-500" :
+                  request.status === "confirmed" || request.payment_status === "paid" ? "bg-emerald-500/20 text-emerald-500" :
+                  request.status === "pending_payment" ? "bg-yellow-500/20 text-yellow-500" :
                   request.status === "in_progress" ? "bg-orange-500/20 text-orange-400" :
-                  request.status === "completed" ? "bg-emerald-500/20 text-emerald-500" :
                   "bg-zinc-700/50 text-zinc-400"
                 }`}>
-                  {request.status === "new" ? "Nová" : request.status === "in_progress" ? "V procese" : request.status}
+                  {request.status === "confirmed" || request.payment_status === "paid" ? "Zaplatené" : 
+                   request.status === "pending_payment" ? "Čaká na platbu" :
+                   request.status === "in_progress" ? "V procese" : 
+                   request.status === "new" ? "Nová" : request.status}
                 </span>
               </td>
               <td className="px-6 py-4 text-zinc-500 text-xs">

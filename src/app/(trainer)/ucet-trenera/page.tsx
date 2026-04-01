@@ -127,8 +127,9 @@ export default function TrainerDashboardPage() {
   const profileUrl = `${siteUrl}${toSlug(username)}`;
   const locationText = [city.trim(), gymName.trim()].filter(Boolean).join(" - ");
 
-  const [pricePersonalEuro, setPricePersonalEuro] = useState<string>("");
-  const [priceOnlineEuro, setPriceOnlineEuro] = useState<string>("");
+  const [pricePersonalEuro, setPricePersonalEuro] = useState("");
+  const [priceOnlineEuro, setPriceOnlineEuro] = useState("");
+  const [priceMealPlanEuro, setPriceMealPlanEuro] = useState("");
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
@@ -175,8 +176,10 @@ export default function TrainerDashboardPage() {
         }
         const pPersonal = typeof (trainer as TrainerRow).price_personal_cents === "number" ? (trainer as TrainerRow).price_personal_cents : null;
         const pOnline = typeof (trainer as TrainerRow).price_online_cents === "number" ? (trainer as TrainerRow).price_online_cents : null;
+        const pMealPlan = (trainer as any).price_meal_plan_cents;
         setPricePersonalEuro(pPersonal && pPersonal > 0 ? (pPersonal / 100).toFixed(2) : "");
         setPriceOnlineEuro(pOnline && pOnline > 0 ? (pOnline / 100).toFixed(2) : "");
+        setPriceMealPlanEuro(typeof pMealPlan === "number" && pMealPlan > 0 ? (pMealPlan / 100).toFixed(2) : "");
       }
     } catch (err) {
       console.error("Error loading profile:", err);
@@ -375,9 +378,11 @@ export default function TrainerDashboardPage() {
       };
       const personalCents = toCents(pricePersonalEuro);
       const onlineCents = toCents(priceOnlineEuro);
+      const mealPlanCents = toCents(priceMealPlanEuro);
       const payload: Record<string, number | null> = {
         price_personal_cents: personalCents,
-        price_online_cents: onlineCents
+        price_online_cents: onlineCents,
+        price_meal_plan_cents: mealPlanCents
       };
       const { error } = await supabase
         .from("trainers")
@@ -1256,6 +1261,16 @@ export default function TrainerDashboardPage() {
                       inputMode="decimal"
                       className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-white placeholder:text-zinc-600"
                       placeholder="30.00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest">Jedálniček na mieru (EUR)</label>
+                    <input
+                      value={priceMealPlanEuro}
+                      onChange={(e) => setPriceMealPlanEuro(e.target.value)}
+                      inputMode="decimal"
+                      className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-white placeholder:text-zinc-600"
+                      placeholder="40.00"
                     />
                   </div>
                 </div>

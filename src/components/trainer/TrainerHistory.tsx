@@ -107,13 +107,20 @@ export default function TrainerHistory({ trainerId }: TrainerHistoryProps) {
       // Spracovanie meal planov
       const mealPlanItems: HistoryItem[] = [];
       if (Array.isArray(mealPlansRes.data)) {
-        mealPlansRes.data.forEach((m: any) => {
+        mealPlansRes.data.forEach((m: {
+          id: string;
+          name?: string;
+          email?: string;
+          phone?: string;
+          status: string;
+          created_at: string;
+        }) => {
           mealPlanItems.push({
             id: m.id,
             type: "meal_plan",
             clientName: m.name || "Bez mena",
-            clientEmail: m.email,
-            clientPhone: m.phone,
+            clientEmail: m.email || null,
+            clientPhone: m.phone || null,
             status: m.status,
             date: m.created_at,
             timestamp: new Date(m.created_at).getTime(),

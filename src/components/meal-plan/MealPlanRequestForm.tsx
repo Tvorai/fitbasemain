@@ -107,21 +107,45 @@ export default function MealPlanRequestForm({ trainerId }: Props) {
     });
   }, [supabase]);
 
-  const finalize = async (pending: PendingMealPlanPayload, accessToken: string) => {
+  const startCheckout = async (pending: PendingMealPlanPayload, accessToken: string) => {
     setSubmitState({ status: "loading" });
-    const res = await createMealPlanRequestAction({
-      trainer_id: pending.trainer_id,
-      access_token: accessToken,
-      ...pending.form,
-    });
+    try {
+      const res = await fetch("/api/stripe/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trainer_id: pending.trainer_id,
+          access_token: accessToken,
+          service_type: "meal_plan",
+          client_name: pending.form.name,
+          client_email: pending.form.email,
+          client_phone: pending.form.phone || null,
+          note: `Cieľ: ${pending.form.goal}. Alergény: ${pending.form.allergens || "žiadne"}. Obľúbené jedlá: ${pending.form.favorite_foods || "žiadne"}`,
+          goal: pending.form.goal,
+          height_cm: pending.form.height_cm,
+          age: pending.form.age,
+          gender: pending.form.gender,
+          allergens: pending.form.allergens || "",
+          favorite_foods: pending.form.favorite_foods || "",
+        }),
+      });
 
-    if (res.status !== "success") {
-      setSubmitState({ status: "error", message: res.message });
-      return;
+      const responsePayload: unknown = await res.json().catch(() => null);
+      const url = isRecord(responsePayload) && typeof responsePayload.url === "string" ? responsePayload.url : null;
+      if (!res.ok || !url) {
+        const message =
+          isRecord(responsePayload) && typeof responsePayload.message === "string"
+            ? responsePayload.message
+            : "Nepodarilo sa spustiť platbu.";
+        setSubmitState({ status: "error", message });
+        return;
+      }
+
+      sessionStorage.removeItem(PENDING_KEY);
+      window.location.href = url;
+    } catch {
+      setSubmitState({ status: "error", message: "Nastala neočakávaná chyba pri komunikácii so serverom." });
     }
-
-    sessionStorage.removeItem(PENDING_KEY);
-    setSubmitState({ status: "success", message: res.message });
   };
 
   useEffect(() => {
@@ -137,7 +161,7 @@ export default function MealPlanRequestForm({ trainerId }: Props) {
     supabase.auth.getSession().then(({ data }) => {
       const token = data.session?.access_token;
       if (!token) return;
-      void finalize(pending, token);
+      void startCheckout(pending, token);
     });
   }, [supabase, trainerId]);
 
@@ -169,7 +193,7 @@ export default function MealPlanRequestForm({ trainerId }: Props) {
         return;
       }
 
-      await finalize(pending, token);
+      await startCheckout(pending, token);
     } catch {
       setSubmitState({ status: "error", message: "Nastala neočakávaná chyba pri komunikácii so serverom." });
     }
@@ -387,7 +411,7 @@ export default function MealPlanRequestForm({ trainerId }: Props) {
           const sessionRes = await supabase.auth.getSession();
           const token = sessionRes.data.session?.access_token;
           if (!token) return;
-          await finalize(pending, token);
+          await startCheckout(pending, token);
           setAuthOpen(false);
         }}
         initialEmail={form.getValues("email")}
