@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       .from("trainer_discounts")
       .select("*")
       .eq("trainer_id", input.trainer_id)
-      .eq("code", input.discount_code.toUpperCase())
+      .eq("code", input.discount_code.trim().toUpperCase())
       .eq("service_type", input.service_type)
       .eq("is_active", true)
       .maybeSingle();
@@ -122,7 +122,6 @@ export async function POST(request: Request) {
     if (discount) {
       const isUsageValid = !discount.max_uses || discount.used_count < discount.max_uses;
       if (isUsageValid) {
-        // Použijeme stĺpce 'type' a 'value' podľa reálneho stavu v DB
         const dType = discount.type;
         const dValue = discount.value;
 
@@ -142,6 +141,10 @@ export async function POST(request: Request) {
       discountMessage = "Neplatný alebo neaktívny zľavový kód pre túto službu.";
     }
   }
+
+  // Zaokrúhlenie na celé centy
+  finalPriceCents = Math.round(finalPriceCents);
+  discountAmountCents = Math.round(discountAmountCents);
 
   if (input.validate_only) {
     return NextResponse.json({
