@@ -124,7 +124,7 @@ export default function HomePage() {
             <div className="relative flex justify-center lg:justify-end">
               <div className="relative w-full max-w-[560px] fitbase-bannerFloat">
                 <div className="absolute inset-0 bg-emerald-500/10 blur-[60px]" />
-                <div className="relative rounded-[2.5rem] border border-emerald-500/20 bg-zinc-900/20 backdrop-blur-sm shadow-2xl overflow-hidden">
+                <div className="relative rounded-[2.5rem] bg-zinc-900/20 backdrop-blur-sm shadow-2xl overflow-hidden">
                   <Image
                     src="/banner.png"
                     alt="Fitbase banner"
