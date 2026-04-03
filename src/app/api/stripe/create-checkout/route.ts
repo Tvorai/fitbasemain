@@ -32,6 +32,7 @@ type TrainerRow = {
   price_personal_cents: number | null;
   price_online_cents: number | null;
   price_meal_plan_cents: number | null;
+  platform_fee_percent: number | null;
 };
 
 function getDateTimePartsInBratislava(iso: string): { date: string; time: string } {
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
 
   const trainerRes = await supabase
     .from("trainers")
-    .select("id, stripe_account_id, price_personal_cents, price_online_cents, price_meal_plan_cents")
+    .select("id, stripe_account_id, price_personal_cents, price_online_cents, price_meal_plan_cents, platform_fee_percent")
     .eq("id", input.trainer_id)
     .maybeSingle<TrainerRow>();
 
@@ -233,6 +234,10 @@ export async function POST(request: Request) {
     if (input.favorite_foods) metadata.favorite_foods = input.favorite_foods;
   }
 
+  // Výpočet poplatku pre platformu (z finálnej ceny po zľave)
+  const platformFeePercent = trainerRes.data.platform_fee_percent ?? 10;
+  const applicationFeeAmount = Math.round((finalPriceCents * platformFeePercent) / 100);
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [
@@ -251,6 +256,7 @@ export async function POST(request: Request) {
     metadata,
     payment_intent_data: {
       transfer_data: { destination: trainerRes.data.stripe_account_id },
+      application_fee_amount: applicationFeeAmount,
       metadata: {
         trainer_id: input.trainer_id,
         user_id: authUser.id,

@@ -57,6 +57,7 @@ type TrainerRow = {
   price_personal_cents?: number | null;
   price_online_cents?: number | null;
   price_meal_plan_cents?: number | null;
+  platform_fee_percent?: number | null;
 };
 
 // Helper pre slugifikáciu
@@ -143,6 +144,7 @@ export default function TrainerDashboardPage() {
   const [pricePersonalEuro, setPricePersonalEuro] = useState("");
   const [priceOnlineEuro, setPriceOnlineEuro] = useState("");
   const [priceMealPlanEuro, setPriceMealPlanEuro] = useState("");
+  const [platformFeePercent, setPlatformFeePercent] = useState("10");
 
   // State pre "Zľavové kódy"
   const [discounts, setDiscounts] = useState<Discount[]>([]);
@@ -204,6 +206,7 @@ export default function TrainerDashboardPage() {
         setPricePersonalEuro(pPersonal && pPersonal > 0 ? (pPersonal / 100).toFixed(2) : "");
         setPriceOnlineEuro(pOnline && pOnline > 0 ? (pOnline / 100).toFixed(2) : "");
         setPriceMealPlanEuro(typeof pMealPlan === "number" && pMealPlan > 0 ? (pMealPlan / 100).toFixed(2) : "");
+        setPlatformFeePercent(String((trainer as TrainerRow).platform_fee_percent ?? 10));
 
         const { data: dscRes } = await supabase
           .from("trainer_discounts")
@@ -410,10 +413,13 @@ export default function TrainerDashboardPage() {
       const personalCents = toCents(pricePersonalEuro);
       const onlineCents = toCents(priceOnlineEuro);
       const mealPlanCents = toCents(priceMealPlanEuro);
+      const pFee = Math.min(100, Math.max(0, parseInt(platformFeePercent) || 0));
+
       const payload: Record<string, number | null> = {
         price_personal_cents: personalCents,
         price_online_cents: onlineCents,
-        price_meal_plan_cents: mealPlanCents
+        price_meal_plan_cents: mealPlanCents,
+        platform_fee_percent: pFee
       };
       const { error } = await supabase
         .from("trainers")
@@ -1377,6 +1383,21 @@ export default function TrainerDashboardPage() {
                       className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-white placeholder:text-zinc-600"
                       placeholder="40.00"
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest">Provízia platformy (%)</label>
+                    <input
+                      value={platformFeePercent}
+                      onChange={(e) => setPlatformFeePercent(e.target.value)}
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-white placeholder:text-zinc-600"
+                      placeholder="10"
+                    />
+                    <div className="text-[10px] text-zinc-500 italic mt-1 ml-1">
+                      Táto provízia sa odpočíta z každej novej platby.
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-end">
