@@ -48,7 +48,15 @@ const sk: Messages = {
         password: "Heslo"
       },
       submit: "Prihlásiť sa",
-      forgotPasswordHint: "Zabudli ste heslo?"
+      forgotPasswordHint: "Zabudli ste heslo?",
+      forgotPasswordTitle: "Reset hesla",
+      forgotPasswordSubtitle: "Zadajte svoj e-mail pre zaslanie odkazu na resetovanie hesla",
+      forgotPasswordSubmit: "Odoslať",
+      backToLogin: "Späť na prihlásenie",
+      resetEmailSent: "Odkaz na resetovanie hesla bol odoslaný na váš e-mail.",
+      resetPasswordTitle: "Nastavenie nového hesla",
+      resetPasswordSubmit: "Zmeniť heslo",
+      resetPasswordSuccess: "Vaše heslo bolo úspešne zmenené. Teraz sa môžete prihlásiť."
     },
     userDashboard: {
       title: "Používateľský dashboard",

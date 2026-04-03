@@ -49,6 +49,14 @@ export type Messages = {
       };
       submit: string;
       forgotPasswordHint: string;
+      forgotPasswordTitle: string;
+      forgotPasswordSubtitle: string;
+      forgotPasswordSubmit: string;
+      backToLogin: string;
+      resetEmailSent: string;
+      resetPasswordTitle: string;
+      resetPasswordSubmit: string;
+      resetPasswordSuccess: string;
     };
     userDashboard: {
       title: string;

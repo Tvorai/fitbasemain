@@ -22,6 +22,8 @@ export default function UserLoginPage() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("user");
   const [modeError, setModeError] = useState<string | null>(null);
+  const [view, setView] = useState<"login" | "forgot-password">("login");
+  const [resetStatus, setResetStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     const mode = new URLSearchParams(window.location.search).get("mode");
@@ -51,6 +53,8 @@ export default function UserLoginPage() {
                   setAuthMode("user");
                   setModeError(null);
                   setShowForgotPassword(false);
+                  setView("login");
+                  setResetStatus(null);
                 }}
                 className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${
                   authMode === "user" ? "bg-emerald-500 text-black" : "text-zinc-300 hover:text-white"
@@ -64,6 +68,8 @@ export default function UserLoginPage() {
                   setAuthMode("trainer");
                   setModeError(null);
                   setShowForgotPassword(false);
+                  setView("login");
+                  setResetStatus(null);
                 }}
                 className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${
                   authMode === "trainer" ? "bg-emerald-500 text-black" : "text-zinc-300 hover:text-white"
@@ -74,126 +80,209 @@ export default function UserLoginPage() {
             </div>
 
             <h1 className="font-display text-5xl leading-[0.9] tracking-wide md:text-6xl">
-              {(authMode === "trainer" ? "Prihlásenie trénera" : messages.pages.userLogin.title).toUpperCase()}
+              {view === "forgot-password" 
+                ? messages.pages.userLogin.forgotPasswordTitle.toUpperCase()
+                : (authMode === "trainer" ? "Prihlásenie trénera" : messages.pages.userLogin.title).toUpperCase()}
             </h1>
             <p className="mt-3 text-sm italic text-white/70 md:text-base">
-              {authMode === "trainer" ? "Posuňte svoju profesiu na nový level" : messages.pages.userLogin.subtitle}
+              {view === "forgot-password"
+                ? messages.pages.userLogin.forgotPasswordSubtitle
+                : (authMode === "trainer" ? "Posuňte svoju profesiu na nový level" : messages.pages.userLogin.subtitle)}
             </p>
 
-            <form
-              className="mt-7 space-y-3 md:mt-8"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (loading) return;
+            {view === "login" ? (
+              <form
+                className="mt-7 space-y-3 md:mt-8"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (loading) return;
 
-                setShowForgotPassword(false);
-                setModeError(null);
+                  setShowForgotPassword(false);
+                  setModeError(null);
 
-                if (!supabase) return;
-                if (!email.trim() || !password) return;
+                  if (!supabase) return;
+                  if (!email.trim() || !password) return;
 
-                setLoading(true);
-                const { error } = await supabase.auth.signInWithPassword({
-                  email: email.trim(),
-                  password
-                });
-                setLoading(false);
+                  setLoading(true);
+                  const { error } = await supabase.auth.signInWithPassword({
+                    email: email.trim(),
+                    password
+                  });
+                  setLoading(false);
 
-                if (error) {
-                  setShowForgotPassword(true);
-                  return;
-                }
-
-                if (authMode === "trainer") {
-                  const userRes = await supabase.auth.getUser();
-                  const user = userRes.data.user;
-                  if (!user) {
-                    await supabase.auth.signOut();
-                    setModeError("Nepodarilo sa overiť účet trénera. Skúste to znova.");
+                  if (error) {
+                    setShowForgotPassword(true);
                     return;
                   }
 
-                  const trainerRes = await supabase
-                    .from("trainers")
-                    .select("id")
-                    .eq("profile_id", user.id)
-                    .maybeSingle<{ id: string }>();
+                  if (authMode === "trainer") {
+                    const userRes = await supabase.auth.getUser();
+                    const user = userRes.data.user;
+                    if (!user) {
+                      await supabase.auth.signOut();
+                      setModeError("Nepodarilo sa overiť účet trénera. Skúste to znova.");
+                      return;
+                    }
 
-                  if (trainerRes.error || !trainerRes.data?.id) {
-                    await supabase.auth.signOut();
-                    setModeError("Tento účet nie je tréner.");
+                    const trainerRes = await supabase
+                      .from("trainers")
+                      .select("id")
+                      .eq("profile_id", user.id)
+                      .maybeSingle<{ id: string }>();
+
+                    if (trainerRes.error || !trainerRes.data?.id) {
+                      await supabase.auth.signOut();
+                      setModeError("Tento účet nie je tréner.");
+                      return;
+                    }
+
+                    router.push("/ucet-trenera");
                     return;
                   }
 
-                  router.push("/ucet-trenera");
-                  return;
-                }
-
-                router.push("/ucet");
-              }}
-            >
-              <div>
-                <label className="sr-only" htmlFor="email">
-                  {messages.pages.userLogin.fields.email}
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder={messages.pages.userLogin.fields.email}
-                  className="h-12 w-full rounded-full border border-emerald-500/80 bg-transparent px-5 text-white placeholder-white/70 outline-none ring-emerald-400 focus:ring-2"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="sr-only" htmlFor="password">
-                  {messages.pages.userLogin.fields.password}
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder={messages.pages.userLogin.fields.password}
-                  className="h-12 w-full rounded-full border border-emerald-500/80 bg-transparent px-5 text-white placeholder-white/70 outline-none ring-emerald-400 focus:ring-2"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="font-display mt-4 h-12 w-full rounded-full bg-emerald-500 text-center text-2xl tracking-wide text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+                  router.push("/ucet");
+                }}
               >
-                {messages.pages.userLogin.submit.toUpperCase()}
-              </button>
-
-              {modeError ? (
-                <div className="mt-3 text-center text-sm text-red-300">
-                  {modeError}
+                <div>
+                  <label className="sr-only" htmlFor="email">
+                    {messages.pages.userLogin.fields.email}
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder={messages.pages.userLogin.fields.email}
+                    className="h-12 w-full rounded-full border border-emerald-500/80 bg-transparent px-5 text-white placeholder-white/70 outline-none ring-emerald-400 focus:ring-2"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
                 </div>
-              ) : null}
 
-              {showForgotPassword ? (
-                <div className="mt-3 text-center text-sm text-white/80">
-                  {messages.pages.userLogin.forgotPasswordHint}
+                <div>
+                  <label className="sr-only" htmlFor="password">
+                    {messages.pages.userLogin.fields.password}
+                  </label>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder={messages.pages.userLogin.fields.password}
+                    className="h-12 w-full rounded-full border border-emerald-500/80 bg-transparent px-5 text-white placeholder-white/70 outline-none ring-emerald-400 focus:ring-2"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
                 </div>
-              ) : null}
 
-              <div className="mt-3 text-center text-sm text-white/80">
-                <span>Nemáte účet? </span>
-                <Link
-                  href={authMode === "trainer" ? "/registracia?mode=trainer" : "/registracia"}
-                  className="font-semibold text-emerald-400 hover:text-emerald-300"
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="font-display mt-4 h-12 w-full rounded-full bg-emerald-500 text-center text-2xl tracking-wide text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  Registrovať sa
-                </Link>
-              </div>
-            </form>
+                  {messages.pages.userLogin.submit.toUpperCase()}
+                </button>
+
+                {modeError ? (
+                  <div className="mt-3 text-center text-sm text-red-300">
+                    {modeError}
+                  </div>
+                ) : null}
+
+                {showForgotPassword ? (
+                  <div className="mt-3 text-center text-sm text-white/80">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setView("forgot-password");
+                        setShowForgotPassword(false);
+                      }}
+                      className="text-emerald-400 hover:text-emerald-300 underline"
+                    >
+                      {messages.pages.userLogin.forgotPasswordHint}
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="mt-3 text-center text-sm text-white/80">
+                  <span>Nemáte účet? </span>
+                  <Link
+                    href={authMode === "trainer" ? "/registracia?mode=trainer" : "/registracia"}
+                    className="font-semibold text-emerald-400 hover:text-emerald-300"
+                  >
+                    Registrovať sa
+                  </Link>
+                </div>
+              </form>
+            ) : (
+              <form
+                className="mt-7 space-y-3 md:mt-8"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (loading) return;
+
+                  setResetStatus(null);
+                  if (!supabase) return;
+                  if (!email.trim()) return;
+
+                  setLoading(true);
+                  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+                    redirectTo: `${window.location.origin}/reset-hesla`
+                  });
+                  setLoading(false);
+
+                  if (error) {
+                    setResetStatus({ type: "error", text: error.message });
+                    return;
+                  }
+
+                  setResetStatus({ type: "success", text: messages.pages.userLogin.resetEmailSent });
+                }}
+              >
+                <div>
+                  <label className="sr-only" htmlFor="reset-email">
+                    {messages.pages.userLogin.fields.email}
+                  </label>
+                  <input
+                    id="reset-email"
+                    name="email"
+                    type="email"
+                    placeholder={messages.pages.userLogin.fields.email}
+                    className="h-12 w-full rounded-full border border-emerald-500/80 bg-transparent px-5 text-white placeholder-white/70 outline-none ring-emerald-400 focus:ring-2"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="font-display mt-4 h-12 w-full rounded-full bg-emerald-500 text-center text-2xl tracking-wide text-black hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {messages.pages.userLogin.forgotPasswordSubmit.toUpperCase()}
+                </button>
+
+                {resetStatus ? (
+                  <div className={`mt-3 text-center text-sm ${resetStatus.type === "success" ? "text-emerald-300" : "text-red-300"}`}>
+                    {resetStatus.text}
+                  </div>
+                ) : null}
+
+                <div className="mt-3 text-center text-sm text-white/80">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setView("login");
+                      setResetStatus(null);
+                    }}
+                    className="font-semibold text-emerald-400 hover:text-emerald-300"
+                  >
+                    {messages.pages.userLogin.backToLogin}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
 
           <div className="hidden md:block">
