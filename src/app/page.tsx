@@ -94,43 +94,46 @@ export default function HomePage() {
         </div>
 
         <div className="container mx-auto px-4 md:px-6 relative z-10">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <div className="inline-flex flex-wrap justify-center gap-2 md:gap-4 mb-4">
-              {["Online rezervácie", "Platby cez Stripe", "Jedálničky", "Osobné aj online služby"].map((badge) => (
-                <span key={badge} className="px-3 py-1 rounded-full bg-zinc-900 border border-white/10 text-[10px] md:text-xs font-bold uppercase tracking-widest text-emerald-400">
-                  {badge}
-                </span>
-              ))}
-            </div>
-            
-            <h1 className="font-display text-5xl md:text-8xl uppercase leading-[0.9] tracking-tight">
-              Získavaj klientov, rezervácie <br className="hidden md:block" /> a platby na jednom mieste.
-            </h1>
-            
-            <p className="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-              Fitbase je platforma pre osobných trénerov a výživových poradcov, ktorí chcú mať profesionálny profil, online rezervácie, platby a jednoduchú správu služieb bez chaosu.
-            </p>
+          <div className="grid lg:grid-cols-2 gap-14 lg:gap-16 items-center">
+            <div className="text-center lg:text-left space-y-8">
+              <h1 className="font-display text-5xl md:text-7xl lg:text-8xl uppercase leading-[0.9] tracking-tight">
+                Získavaj klientov, rezervácie
+                <br className="hidden md:block" />a platby na jednom mieste.
+              </h1>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-              <Link href="/registracia?mode=trainer" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-black px-10 py-4 rounded-full text-sm font-bold uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 scale-105 hover:scale-110 active:scale-95">
-                Chcem sa registrovať
-              </Link>
-              <button onClick={() => scrollToSection('services')} className="w-full sm:w-auto px-10 py-4 rounded-full text-sm font-bold uppercase tracking-widest text-white border border-white/10 hover:bg-white/5 transition-all">
-                Pozrieť funkcie
-              </button>
+              <p className="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                Fitbase je platforma pre osobných trénerov a výživových poradcov, ktorí chcú mať profesionálny profil, online rezervácie, platby a jednoduchú správu služieb bez chaosu.
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4 pt-2">
+                <Link
+                  href="/registracia?mode=trainer"
+                  className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-black px-10 py-4 rounded-full text-sm font-bold uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 scale-105 hover:scale-110 active:scale-95"
+                >
+                  Chcem sa registrovať
+                </Link>
+                <button
+                  onClick={() => scrollToSection("services")}
+                  className="w-full sm:w-auto px-10 py-4 rounded-full text-sm font-bold uppercase tracking-widest text-white border border-white/10 hover:bg-white/5 transition-all"
+                >
+                  Pozrieť funkcie
+                </button>
+              </div>
             </div>
 
-            {/* Dashboard Preview Placeholder */}
-            <div className="mt-20 relative max-w-5xl mx-auto group">
-              <div className="absolute inset-0 bg-emerald-500/10 blur-[60px] group-hover:bg-emerald-500/20 transition-all duration-700" />
-              <div className="relative aspect-[16/10] bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-                <Image 
-                  src="/Fitbase register.png" 
-                  alt="Fitbase Dashboard" 
-                  fill 
-                  className="object-cover object-top opacity-80 group-hover:opacity-100 transition-opacity duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+            <div className="relative flex justify-center lg:justify-end">
+              <div className="relative w-full max-w-[560px] fitbase-bannerFloat">
+                <div className="absolute inset-0 bg-emerald-500/10 blur-[60px]" />
+                <div className="relative rounded-[2.5rem] border border-emerald-500/20 bg-zinc-900/20 backdrop-blur-sm shadow-2xl overflow-hidden">
+                  <Image
+                    src="/banner.png"
+                    alt="Fitbase banner"
+                    width={1200}
+                    height={900}
+                    priority
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -397,6 +400,21 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+      <style jsx global>{`
+        @keyframes fitbaseBannerFloat {
+          0%,
+          100% {
+            transform: translate3d(0, 0, 0);
+          }
+          50% {
+            transform: translate3d(0, -10px, 0);
+          }
+        }
+        .fitbase-bannerFloat {
+          animation: fitbaseBannerFloat 8s ease-in-out infinite;
+          will-change: transform;
+        }
+      `}</style>
     </div>
   );
 }
