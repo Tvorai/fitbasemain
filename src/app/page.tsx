@@ -96,7 +96,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 md:px-6 relative z-10">
           <div className="grid lg:grid-cols-2 gap-14 lg:gap-16 items-center">
             <div className="text-center lg:text-left space-y-8">
-              <h1 className="font-display text-5xl md:text-7xl lg:text-8xl uppercase leading-[0.9] tracking-tight">
+              <h1 className="font-display text-4xl md:text-5xl lg:text-6xl uppercase leading-[0.95] tracking-tight">
                 Získavaj klientov, rezervácie
                 <br className="hidden md:block" />a platby na jednom mieste.
               </h1>
