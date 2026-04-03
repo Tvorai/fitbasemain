@@ -618,35 +618,6 @@ export default function TrainerDashboardPage() {
     });
   };
 
-  const handleSavePricing = async () => {
-    setSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const pPersonal = Math.round(parseFloat(pricePersonalEuro.replace(",", ".")) * 100) || 0;
-      const pOnline = Math.round(parseFloat(priceOnlineEuro.replace(",", ".")) * 100) || 0;
-      const pMealPlan = Math.round(parseFloat(priceMealPlanEuro.replace(",", ".")) * 100) || 0;
-
-      const { error } = await supabase
-        .from("trainers")
-        .update({
-          price_personal_cents: pPersonal,
-          price_online_cents: pOnline,
-          price_meal_plan_cents: pMealPlan
-        })
-        .eq("profile_id", user.id);
-
-      if (error) throw error;
-      alert("Cenník bol uložený.");
-    } catch (err: any) {
-      console.error(err);
-      alert("Chyba pri ukladaní cenníka.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleAddDiscount = async () => {
     if (!newDiscount.code || !newDiscount.value) return;
     setSaving(true);
