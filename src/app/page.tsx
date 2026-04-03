@@ -335,9 +335,9 @@ export default function HomePage() {
 
       {/* FAQ */}
       <section id="faq" className="py-24">
-        <div className="container mx-auto px-4 md:px-6 max-w-3xl">
-          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight text-center mb-16">Časté otázky</h2>
-          <div className="space-y-6">
+        <div className="container mx-auto px-4 md:px-6 max-w-4xl">
+          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight text-center mb-12">Časté otázky</h2>
+          <div className="grid gap-6">
             {[
               { q: "Ako dlho trvá registrácia?", a: "Len pár minút." },
               { q: "Musím mať firmu alebo živnosť?", a: "Závisí od Stripe onboarding procesu." },
@@ -345,9 +345,21 @@ export default function HomePage() {
               { q: "Ako dostanem peniaze?", a: "Cez Stripe priamo na tvoj účet." },
               { q: "Môžem si nastavovať ceny?", a: "Áno, ceny si určuješ sám." }
             ].map((faq) => (
-              <div key={faq.q} className="p-6 rounded-2xl bg-zinc-900/30 border border-white/5 space-y-3">
-                <h3 className="text-white font-bold uppercase tracking-tight">{faq.q}</h3>
-                <p className="text-zinc-500 text-sm leading-relaxed">{faq.a}</p>
+              <div
+                key={faq.q}
+                className="group relative overflow-hidden rounded-[2rem] border border-white/5 bg-zinc-900/25 px-8 py-7 text-center backdrop-blur-sm shadow-[0_12px_40px_rgba(0,0,0,0.55)] hover:border-emerald-500/25 transition-colors"
+              >
+                <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute inset-0 bg-emerald-500/8" />
+                  <div className="absolute -top-24 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-emerald-500/20 blur-[70px]" />
+                </div>
+                <div className="relative space-y-3">
+                  <div className="mx-auto mb-2 h-10 w-10 rounded-2xl border border-emerald-500/20 bg-black/20 flex items-center justify-center">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_14px_rgba(16,185,129,0.8)]" />
+                  </div>
+                  <h3 className="text-white font-bold uppercase tracking-tight">{faq.q}</h3>
+                  <p className="text-zinc-500 text-sm leading-relaxed">{faq.a}</p>
+                </div>
               </div>
             ))}
           </div>
