@@ -34,7 +34,7 @@ export default function HomePage() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 pt-4 md:pt-6">
         <div
-          className={`mx-auto max-w-6xl rounded-full border border-white/10 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.55)] transition-all duration-300 ${
+          className={`mx-auto max-w-6xl rounded-full border border-emerald-500/30 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.55)] transition-all duration-300 ${
             isScrolled ? "bg-black/85 py-2" : "bg-black/60 py-3"
           }`}
         >
