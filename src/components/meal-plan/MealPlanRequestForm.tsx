@@ -198,7 +198,7 @@ export default function MealPlanRequestForm({ trainerId }: Props) {
     });
   }, [supabase]);
 
-  const startCheckout = async (pending: PendingMealPlanPayload, accessToken: string) => {
+  const startCheckout = async (pending: PendingMealPlanPayload & { discount_code?: string }, accessToken: string) => {
     setSubmitState({ status: "loading" });
     try {
       const res = await fetch("/api/stripe/create-checkout", {
@@ -218,7 +218,7 @@ export default function MealPlanRequestForm({ trainerId }: Props) {
           gender: pending.form.gender,
           allergens: pending.form.allergens || "",
           favorite_foods: pending.form.favorite_foods || "",
-          discount_code: discountCode.trim() || undefined
+          discount_code: pending.discount_code
         }),
       });
 
@@ -253,7 +253,9 @@ export default function MealPlanRequestForm({ trainerId }: Props) {
     supabase.auth.getSession().then(({ data }) => {
       const token = data.session?.access_token;
       if (!token) return;
-      void startCheckout(pending, token);
+      
+      const rawWithDiscount = JSON.parse(raw);
+      void startCheckout(rawWithDiscount, token);
     });
   }, [supabase, trainerId]);
 
@@ -277,22 +279,24 @@ export default function MealPlanRequestForm({ trainerId }: Props) {
     }
 
     const pending: PendingMealPlanPayload = {
-      trainer_id: trainerId,
-      form: { ...values, name: resolvedName, email: resolvedEmail, phone: resolvedPhone },
-      createdAt: Date.now(),
-    };
+        trainer_id: trainerId,
+        form: { ...values, name: resolvedName, email: resolvedEmail, phone: resolvedPhone },
+        createdAt: Date.now(),
+      };
 
-    try {
-      const sessionResult = await supabase.auth.getSession();
-      const token = sessionResult.data.session?.access_token;
+      const finalCode = (discountInfo?.isValid && discountCode.trim()) ? discountCode.trim() : undefined;
 
-      if (!token) {
-        sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
-        setAuthOpen(true);
-        return;
-      }
+      try {
+        const sessionResult = await supabase.auth.getSession();
+        const token = sessionResult.data.session?.access_token;
 
-      await startCheckout(pending, token);
+        if (!token) {
+          sessionStorage.setItem(PENDING_KEY, JSON.stringify({ ...pending, discount_code: finalCode }));
+          setAuthOpen(true);
+          return;
+        }
+
+        await startCheckout({ ...pending, discount_code: finalCode }, token);
     } catch {
       setSubmitState({ status: "error", message: "Nastala neočakávaná chyba pri komunikácii so serverom." });
     }
@@ -565,7 +569,9 @@ export default function MealPlanRequestForm({ trainerId }: Props) {
           const sessionRes = await supabase.auth.getSession();
           const token = sessionRes.data.session?.access_token;
           if (!token) return;
-          await startCheckout(pending, token);
+          
+          const rawWithDiscount = JSON.parse(raw);
+          await startCheckout(rawWithDiscount, token);
           setAuthOpen(false);
         }}
         initialEmail={form.getValues("email")}

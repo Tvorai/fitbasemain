@@ -247,7 +247,7 @@ export default function BookingForm({
     reset(defaultValues);
   }, [defaultValues, reset]);
 
-  const startCheckout = useCallback(async (payload: PendingBookingPayload, accessToken: string) => {
+  const startCheckout = useCallback(async (payload: PendingBookingPayload, accessToken: string, validatedCode?: string) => {
     setIsSubmitting(true);
     setFormState({ status: "idle" });
 
@@ -265,7 +265,7 @@ export default function BookingForm({
           client_phone: payload.form.client_phone || null,
           note: payload.form.note || null,
           access_token: accessToken,
-          discount_code: discountCode.trim() || undefined
+          discount_code: validatedCode || undefined
         }),
       });
 
@@ -308,7 +308,11 @@ export default function BookingForm({
     supabase.auth.getSession().then(({ data }) => {
       const session = data.session;
       if (!session?.access_token) return;
-      void startCheckout(pending, session.access_token);
+      
+      const rawWithDiscount = JSON.parse(raw);
+      const validatedCode = rawWithDiscount.discount_code;
+      
+      void startCheckout(pending, session.access_token, validatedCode);
     });
   }, [selectedSlot.starts_at, selectedSlot.trainer_id, startCheckout, supabase]);
 
@@ -347,13 +351,15 @@ export default function BookingForm({
         serviceType,
       };
 
+      const finalCode = (discountInfo?.isValid && discountCode.trim()) ? discountCode.trim() : undefined;
+
       if (!session?.access_token) {
-        sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+        sessionStorage.setItem(PENDING_KEY, JSON.stringify({ ...pending, discount_code: finalCode }));
         setAuthOpen(true);
         return;
       }
 
-      await startCheckout(pending, session.access_token);
+      await startCheckout(pending, session.access_token, finalCode);
     } catch {
       setFormState({ status: "error", message: "Nastala neočakávaná chyba pri komunikácii so serverom." });
     }
@@ -377,8 +383,12 @@ export default function BookingForm({
           if (!pending) return;
           const session = (await supabase.auth.getSession()).data.session;
           if (!session?.access_token) return;
+          
+          const rawWithDiscount = JSON.parse(raw);
+          const validatedCode = rawWithDiscount.discount_code;
+          
           setAuthOpen(false);
-          await startCheckout(pending, session.access_token);
+          await startCheckout(pending, session.access_token, validatedCode);
         }}
       />
       <div className="mb-6 p-4 bg-zinc-800/50 border border-zinc-700 rounded-lg">
