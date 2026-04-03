@@ -56,6 +56,7 @@ type TrainerRow = {
   profiles: { full_name: string | null; phone_number?: string | null } | null;
   price_personal_cents?: number | null;
   price_online_cents?: number | null;
+  price_meal_plan_cents?: number | null;
 };
 
 // Helper pre slugifikáciu
