@@ -4,6 +4,138 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+type IconName =
+  | "sparkles"
+  | "bolt"
+  | "calendar"
+  | "creditCard"
+  | "user"
+  | "shield"
+  | "tag"
+  | "layout"
+  | "grid"
+  | "help"
+  | "mail"
+  | "rocket"
+  | "check";
+
+function Icon({ name, className }: { name: IconName; className?: string }) {
+  const common = {
+    className,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+  } as const;
+
+  if (name === "bolt") {
+    return (
+      <svg {...common} stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13 2L3 14h8l-1 8 11-14h-8l0-6z" />
+      </svg>
+    );
+  }
+  if (name === "sparkles") {
+    return (
+      <svg {...common} stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 2l1.6 5.1L19 9l-5.4 1.9L12 16l-1.6-5.1L5 9l5.4-1.9L12 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 14l.8 2.5L8 17l-2.2.5L5 20l-.8-2.5L2 17l2.2-.5L5 14z" />
+      </svg>
+    );
+  }
+  if (name === "calendar") {
+    return (
+      <svg {...common} stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 3v2M17 3v2M4 8h16" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 5h12a2 2 0 012 2v13a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2z" />
+      </svg>
+    );
+  }
+  if (name === "creditCard") {
+    return (
+      <svg {...common} stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h14a2 2 0 012 2v2H3V7z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 11h20v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 15h4" />
+      </svg>
+    );
+  }
+  if (name === "user") {
+    return (
+      <svg {...common} stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20 21a8 8 0 10-16 0" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 11a4 4 0 100-8 4 4 0 000 8z" />
+      </svg>
+    );
+  }
+  if (name === "shield") {
+    return (
+      <svg {...common} stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 2l8 4v6c0 5-3.4 9.4-8 10-4.6-.6-8-5-8-10V6l8-4z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
+      </svg>
+    );
+  }
+  if (name === "tag") {
+    return (
+      <svg {...common} stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9 9 9-9-9-9H6a3 3 0 00-3 3v6z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 7.5h.01" />
+      </svg>
+    );
+  }
+  if (name === "layout") {
+    return (
+      <svg {...common} stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a2 2 0 012-2h12a2 2 0 012 2v3H4V5z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 10h8v11H6a2 2 0 01-2-2V10z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h6v9a2 2 0 01-2 2h-4V10z" />
+      </svg>
+    );
+  }
+  if (name === "grid") {
+    return (
+      <svg {...common} stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4h7v7H4V4zM13 4h7v7h-7V4zM4 13h7v7H4v-7zM13 13h7v7h-7v-7z" />
+      </svg>
+    );
+  }
+  if (name === "help") {
+    return (
+      <svg {...common} stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.1 9a3 3 0 115.6 1.4c-.6.8-1.7 1.2-1.7 2.6V14" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M22 12a10 10 0 11-20 0 10 10 0 0120 0z" />
+      </svg>
+    );
+  }
+  if (name === "mail") {
+    return (
+      <svg {...common} stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16v12H4V6z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 7l8 6 8-6" />
+      </svg>
+    );
+  }
+  if (name === "rocket") {
+    return (
+      <svg {...common} stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14 10l-4 4" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 2c4 1 7 4 8 8-2 4-6 8-10 10-2-1-4-3-5-5 2-4 6-8 7-13z"
+        />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 16l-2 6 6-2" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common} stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20 6L9 17l-5-5" />
+    </svg>
+  );
+}
+
 export default function HomePage() {
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -97,8 +229,12 @@ export default function HomePage() {
           <div className="grid lg:grid-cols-2 gap-14 lg:gap-16 items-center">
             <div className="text-center lg:text-left space-y-8">
               <h1 className="font-display text-4xl md:text-5xl lg:text-6xl uppercase leading-[0.95] tracking-tight">
-                Získavaj klientov, rezervácie
-                <br className="hidden md:block" />a platby na jednom mieste.
+                <span className="inline-flex items-center gap-3 justify-center lg:justify-start">
+                  <Icon name="bolt" className="h-7 w-7 text-emerald-400" />
+                  <span>Získavaj klientov, rezervácie</span>
+                </span>
+                <br className="hidden md:block" />
+                a platby na jednom mieste.
               </h1>
 
               <p className="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto lg:mx-0 leading-relaxed">
@@ -145,7 +281,12 @@ export default function HomePage() {
         <div className="container mx-auto px-4 md:px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-6 text-center lg:text-left">
-              <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight">Menej chaosu, <br /> viac klientov.</h2>
+              <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight flex items-center justify-center lg:justify-start gap-3">
+                <Icon name="sparkles" className="h-7 w-7 text-emerald-400" />
+                <span>
+                  Menej chaosu, <br /> viac klientov.
+                </span>
+              </h2>
               <p className="text-zinc-400 text-lg leading-relaxed">
                 Tréneri často riešia rezervácie cez správy, platby ručne, termíny chaoticky a prezentáciu cez Instagram alebo PDF. Fitbase ti pomôže mať všetko profesionálne na jednom mieste.
               </p>
@@ -162,7 +303,10 @@ export default function HomePage() {
                   <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:bg-emerald-500/20 transition-colors">
                     <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]" />
                   </div>
-                  <h3 className="text-white font-bold mb-2 uppercase tracking-wide">{box.title}</h3>
+                  <h3 className="text-white font-bold mb-2 uppercase tracking-wide flex items-center gap-2">
+                    <Icon name={box.title === "Rezervácie bez dohadovania" ? "calendar" : box.title === "Platby vopred" ? "creditCard" : box.title === "Profesionálny profil trénera" ? "user" : "layout"} className="h-4 w-4 text-emerald-400" />
+                    <span>{box.title}</span>
+                  </h3>
                   <p className="text-zinc-500 text-sm">{box.text}</p>
                 </div>
               ))}
@@ -175,7 +319,10 @@ export default function HomePage() {
       <section id="how" className="py-24">
         <div className="container mx-auto px-4 md:px-6">
           <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight">Ako začať za pár minút</h2>
+            <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight flex items-center justify-center gap-3">
+              <Icon name="rocket" className="h-7 w-7 text-emerald-400" />
+              <span>Ako začať za pár minút</span>
+            </h2>
           </div>
           
           <div className="grid md:grid-cols-4 gap-8 relative">
@@ -189,7 +336,10 @@ export default function HomePage() {
                 <div className="w-16 h-16 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center mx-auto text-emerald-500 font-display text-3xl group-hover:bg-emerald-500 group-hover:text-black transition-all duration-500">
                   {step.step}
                 </div>
-                <h3 className="text-white font-bold uppercase tracking-wide">{step.title}</h3>
+                <h3 className="text-white font-bold uppercase tracking-wide flex items-center justify-center gap-2">
+                  <Icon name={step.step === "1" ? "user" : step.step === "2" ? "shield" : step.step === "3" ? "calendar" : "check"} className="h-4 w-4 text-emerald-400" />
+                  <span>{step.title}</span>
+                </h3>
                 <p className="text-zinc-500 text-sm leading-relaxed">{step.text}</p>
                 {idx < 3 && <div className="hidden md:block absolute top-8 left-[calc(50%+40px)] w-[calc(100%-80px)] h-[1px] bg-white/10" />}
               </div>
@@ -208,7 +358,10 @@ export default function HomePage() {
       <section id="services" className="py-24 bg-zinc-950/50">
         <div className="container mx-auto px-4 md:px-6">
           <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight">Čo všetko Fitbase umožňuje</h2>
+            <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight flex items-center justify-center gap-3">
+              <Icon name="grid" className="h-7 w-7 text-emerald-400" />
+              <span>Čo všetko Fitbase umožňuje</span>
+            </h2>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -221,7 +374,25 @@ export default function HomePage() {
               { title: "Zľavové kódy a cenník", text: "Nastavuj ceny, akcie a promo kódy." }
             ].map((service) => (
               <div key={service.title} className="p-8 rounded-[2rem] bg-zinc-900/30 border border-white/5 hover:border-emerald-500/20 transition-all group hover:bg-zinc-900/50">
-                <h3 className="text-emerald-400 font-bold mb-4 uppercase tracking-widest">{service.title}</h3>
+                <h3 className="text-emerald-400 font-bold mb-4 uppercase tracking-widest flex items-center gap-2">
+                  <Icon
+                    name={
+                      service.title === "Osobné tréningy"
+                        ? "calendar"
+                        : service.title === "Online konzultácie"
+                          ? "sparkles"
+                          : service.title === "Jedálničky na mieru"
+                            ? "layout"
+                            : service.title === "Profil trénera"
+                              ? "user"
+                              : service.title === "Platby a výplaty"
+                                ? "creditCard"
+                                : "tag"
+                    }
+                    className="h-5 w-5"
+                  />
+                  <span>{service.title}</span>
+                </h3>
                 <p className="text-zinc-400 text-sm leading-relaxed">{service.text}</p>
               </div>
             ))}
@@ -235,7 +406,10 @@ export default function HomePage() {
           <div className="max-w-4xl mx-auto bg-emerald-500 rounded-[3rem] p-10 md:p-20 text-black relative overflow-hidden">
             <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] bg-white/20 blur-[80px] rounded-full" />
             <div className="relative z-10">
-              <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-12">Čo tým získaš</h2>
+              <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-12 flex items-center gap-3">
+                <Icon name="sparkles" className="h-7 w-7" />
+                <span>Čo tým získaš</span>
+              </h2>
               <div className="grid sm:grid-cols-2 gap-y-6 gap-x-12">
                 {[
                   "Viac dôvery u klientov",
@@ -263,7 +437,10 @@ export default function HomePage() {
       {/* Preview */}
       <section id="preview" className="py-24 bg-zinc-950/50 overflow-hidden">
         <div className="container mx-auto px-4 md:px-6 text-center">
-          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-4">Všetko navrhnuté jednoducho a prehľadne</h2>
+          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-4 flex items-center justify-center gap-3">
+            <Icon name="layout" className="h-7 w-7 text-emerald-400" />
+            <span>Všetko navrhnuté jednoducho a prehľadne</span>
+          </h2>
           <p className="text-zinc-500 mb-16">Sústreď sa na klientov, nie na chaos okolo.</p>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 opacity-50 grayscale hover:grayscale-0 transition-all duration-700">
@@ -284,8 +461,9 @@ export default function HomePage() {
             <div className="relative bg-zinc-900/40 border border-emerald-500/20 rounded-[3rem] p-10 md:p-16 backdrop-blur-sm shadow-[0_20px_80px_rgba(0,0,0,0.6)]">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-10">
                 <div className="space-y-4">
-                  <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight text-emerald-400">
-                    Fitbase je pre teba, ak
+                  <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight text-emerald-400 flex items-center gap-3">
+                    <Icon name="check" className="h-7 w-7 text-emerald-400" />
+                    <span>Fitbase je pre teba, ak</span>
                   </h2>
                   <div className="text-zinc-500 text-sm">
                     Moderný profil, rezervácie aj platby bez chaosu.
@@ -322,7 +500,10 @@ export default function HomePage() {
       {/* Pricing */}
       <section id="pricing" className="py-24 bg-zinc-950/50">
         <div className="container mx-auto px-4 md:px-6 text-center max-w-3xl">
-          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-6">Jednoduchý a férový model</h2>
+          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-6 flex items-center justify-center gap-3">
+            <Icon name="creditCard" className="h-7 w-7 text-emerald-400" />
+            <span>Jednoduchý a férový model</span>
+          </h2>
           <p className="text-zinc-400 text-lg leading-relaxed mb-12">
             Registrácia je zdarma. Platforma si berie províziu len z úspešne zaplatených objednávok. Zarábame len vtedy, keď zarábaš aj ty.
           </p>
@@ -336,7 +517,10 @@ export default function HomePage() {
       {/* FAQ */}
       <section id="faq" className="py-24">
         <div className="container mx-auto px-4 md:px-6 max-w-4xl">
-          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight text-center mb-12">Časté otázky</h2>
+          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight text-center mb-12 flex items-center justify-center gap-3">
+            <Icon name="help" className="h-7 w-7 text-emerald-400" />
+            <span>Časté otázky</span>
+          </h2>
           <div className="grid gap-6">
             {[
               { q: "Ako dlho trvá registrácia?", a: "Len pár minút." },
@@ -357,7 +541,10 @@ export default function HomePage() {
                   <div className="mx-auto mb-2 h-10 w-10 rounded-2xl border border-emerald-500/20 bg-black/20 flex items-center justify-center">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_14px_rgba(16,185,129,0.8)]" />
                   </div>
-                  <h3 className="text-white font-bold uppercase tracking-tight">{faq.q}</h3>
+                  <h3 className="text-white font-bold uppercase tracking-tight flex items-center justify-center gap-2">
+                    <Icon name="help" className="h-4 w-4 text-emerald-400" />
+                    <span>{faq.q}</span>
+                  </h3>
                   <p className="text-zinc-500 text-sm leading-relaxed">{faq.a}</p>
                 </div>
               </div>
@@ -369,7 +556,10 @@ export default function HomePage() {
       {/* Contact */}
       <section id="contact" className="py-24 bg-zinc-950/50">
         <div className="container mx-auto px-4 md:px-6 text-center">
-          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-6">Máš otázky?</h2>
+          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-6 flex items-center justify-center gap-3">
+            <Icon name="mail" className="h-7 w-7 text-emerald-400" />
+            <span>Máš otázky?</span>
+          </h2>
           <p className="text-zinc-400 text-lg mb-12 max-w-2xl mx-auto">
             Za Fitbase stojí reálny človek. Ak chceš, pokojne ma kontaktuj a rád ti ukážem, ako to funguje.
           </p>
@@ -391,7 +581,12 @@ export default function HomePage() {
       <section id="cta" className="py-24 md:py-48 relative overflow-hidden">
         <div className="absolute inset-0 bg-emerald-500 pointer-events-none opacity-5" />
         <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
-          <h2 className="font-display text-5xl md:text-8xl uppercase tracking-tight mb-8">Začni budovať svoj <br /> tréningový biznis online.</h2>
+          <h2 className="font-display text-5xl md:text-8xl uppercase tracking-tight mb-8 flex items-center justify-center gap-3">
+            <Icon name="rocket" className="h-8 w-8 text-emerald-400" />
+            <span>
+              Začni budovať svoj <br /> tréningový biznis online.
+            </span>
+          </h2>
           <p className="text-zinc-400 text-xl mb-12 max-w-xl mx-auto">
             Získaj profil, rezervácie a platby na jednom mieste.
           </p>
