@@ -1,35 +1,373 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { Container } from "@/components/Container";
-import { useI18n } from "@/providers/i18n";
+import { useEffect, useState } from "react";
 
 export default function HomePage() {
-  const { messages } = useI18n();
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      const offset = 80;
+      const bodyRect = document.body.getBoundingClientRect().top;
+      const elementRect = element.getBoundingClientRect().top;
+      const elementPosition = elementRect - bodyRect;
+      const offsetPosition = elementPosition - offset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      });
+    }
+  };
+
   return (
-    <Container className="py-8 space-y-4 text-white">
-      <h1 className="text-3xl font-display uppercase tracking-wider">{messages.common.brand}</h1>
-      <p className="text-zinc-400">Vyberte stránku:</p>
-      <div className="flex flex-col gap-2">
-        <Link href="/ucet" className="text-emerald-400 hover:text-emerald-300">
-          {messages.common.menu.userDashboard}
-        </Link>
-        <Link href="/ucet-trenera" className="text-emerald-400 hover:text-emerald-300">
-          {messages.common.menu.trainerDashboard}
-        </Link>
-        <Link href="/historia-rezervacii" className="text-emerald-400 hover:text-emerald-300">
-          {messages.common.menu.bookings}
-        </Link>
-        <Link href="/historia-platieb" className="text-emerald-400 hover:text-emerald-300">
-          {messages.common.menu.payments}
-        </Link>
-        <Link href="/nadstavenia" className="text-emerald-400 hover:text-emerald-300">
-          {messages.common.menu.settings}
-        </Link>
-        <Link href="/john-doe" className="text-emerald-400 hover:text-emerald-300">
-          /[trainerSlug] príklad
-        </Link>
-      </div>
-    </Container>
+    <div className="min-h-screen bg-black text-white selection:bg-emerald-500/30">
+      {/* Navigation */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "bg-black/80 backdrop-blur-md border-b border-white/5 py-3" : "bg-transparent py-5"}`}>
+        <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/Fitbase logo.png" alt="Fitbase" width={120} height={28} priority className="h-auto w-[100px] md:w-[120px]" />
+          </Link>
+          
+          <div className="hidden lg:flex items-center gap-8 text-sm font-bold uppercase tracking-widest text-zinc-400">
+            <button onClick={() => scrollToSection('why')} className="hover:text-emerald-400 transition-colors">Prečo Fitbase</button>
+            <button onClick={() => scrollToSection('how')} className="hover:text-emerald-400 transition-colors">Ako to funguje</button>
+            <button onClick={() => scrollToSection('services')} className="hover:text-emerald-400 transition-colors">Funkcie</button>
+            <button onClick={() => scrollToSection('pricing')} className="hover:text-emerald-400 transition-colors">Cenník</button>
+            <button onClick={() => scrollToSection('faq')} className="hover:text-emerald-400 transition-colors">FAQ</button>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Link href="/prihlasenie" className="hidden sm:block text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+              Prihlásiť sa
+            </Link>
+            <Link href="/registracia?mode=trainer" className="bg-emerald-500 hover:bg-emerald-400 text-black px-5 py-2.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20">
+              Začať ako tréner
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section id="hero" className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-[1400px] pointer-events-none opacity-20">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/40 blur-[120px] rounded-full" />
+          <div className="absolute bottom-[10%] right-[-5%] w-[30%] h-[30%] bg-emerald-600/30 blur-[100px] rounded-full" />
+        </div>
+
+        <div className="container mx-auto px-4 md:px-6 relative z-10">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            <div className="inline-flex flex-wrap justify-center gap-2 md:gap-4 mb-4">
+              {["Online rezervácie", "Platby cez Stripe", "Jedálničky", "Osobné aj online služby"].map((badge) => (
+                <span key={badge} className="px-3 py-1 rounded-full bg-zinc-900 border border-white/10 text-[10px] md:text-xs font-bold uppercase tracking-widest text-emerald-400">
+                  {badge}
+                </span>
+              ))}
+            </div>
+            
+            <h1 className="font-display text-5xl md:text-8xl uppercase leading-[0.9] tracking-tight">
+              Získavaj klientov, rezervácie <br className="hidden md:block" /> a platby na jednom mieste.
+            </h1>
+            
+            <p className="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+              Fitbase je platforma pre osobných trénerov a výživových poradcov, ktorí chcú mať profesionálny profil, online rezervácie, platby a jednoduchú správu služieb bez chaosu.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+              <Link href="/registracia?mode=trainer" className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-black px-10 py-4 rounded-full text-sm font-bold uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 scale-105 hover:scale-110 active:scale-95">
+                Chcem sa registrovať
+              </Link>
+              <button onClick={() => scrollToSection('services')} className="w-full sm:w-auto px-10 py-4 rounded-full text-sm font-bold uppercase tracking-widest text-white border border-white/10 hover:bg-white/5 transition-all">
+                Pozrieť funkcie
+              </button>
+            </div>
+
+            {/* Dashboard Preview Placeholder */}
+            <div className="mt-20 relative max-w-5xl mx-auto group">
+              <div className="absolute inset-0 bg-emerald-500/10 blur-[60px] group-hover:bg-emerald-500/20 transition-all duration-700" />
+              <div className="relative aspect-[16/10] bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+                <Image 
+                  src="/Fitbase register.png" 
+                  alt="Fitbase Dashboard" 
+                  fill 
+                  className="object-cover object-top opacity-80 group-hover:opacity-100 transition-opacity duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Fitbase */}
+      <section id="why" className="py-24 bg-zinc-950/50">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-6 text-center lg:text-left">
+              <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight">Menej chaosu, <br /> viac klientov.</h2>
+              <p className="text-zinc-400 text-lg leading-relaxed">
+                Tréneri často riešia rezervácie cez správy, platby ručne, termíny chaoticky a prezentáciu cez Instagram alebo PDF. Fitbase ti pomôže mať všetko profesionálne na jednom mieste.
+              </p>
+            </div>
+            
+            <div className="grid sm:grid-cols-2 gap-6">
+              {[
+                { title: "Rezervácie bez dohadovania", text: "Klienti si vyberú službu a termín online." },
+                { title: "Platby vopred", text: "Menej storien, viac istoty." },
+                { title: "Profesionálny profil trénera", text: "Lepšia dôveryhodnosť a prezentácia." },
+                { title: "Všetko na jednom mieste", text: "Tréningy, online konzultácie aj jedálničky." }
+              ].map((box) => (
+                <div key={box.title} className="p-6 rounded-3xl bg-zinc-900/50 border border-white/5 hover:border-emerald-500/30 transition-all group">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:bg-emerald-500/20 transition-colors">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]" />
+                  </div>
+                  <h3 className="text-white font-bold mb-2 uppercase tracking-wide">{box.title}</h3>
+                  <p className="text-zinc-500 text-sm">{box.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section id="how" className="py-24">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="max-w-3xl mx-auto text-center mb-16">
+            <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight">Ako začať za pár minút</h2>
+          </div>
+          
+          <div className="grid md:grid-cols-4 gap-8 relative">
+            {[
+              { step: "1", title: "Vytvoríš si profil trénera", text: "Vyplníš služby, ceny a informácie o sebe." },
+              { step: "2", title: "Prepojíš platobný účet", text: "Cez Stripe budeš prijímať platby bezpečne online." },
+              { step: "3", title: "Nastavíš dostupnosť a ponuku", text: "Osobné tréningy, online konzultácie alebo jedálničky." },
+              { step: "4", title: "Získavaš rezervácie a objednávky", text: "Klienti si službu objednajú a zaplatia jednoducho cez web." }
+            ].map((step, idx) => (
+              <div key={step.step} className="relative space-y-4 text-center group">
+                <div className="w-16 h-16 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center mx-auto text-emerald-500 font-display text-3xl group-hover:bg-emerald-500 group-hover:text-black transition-all duration-500">
+                  {step.step}
+                </div>
+                <h3 className="text-white font-bold uppercase tracking-wide">{step.title}</h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">{step.text}</p>
+                {idx < 3 && <div className="hidden md:block absolute top-8 left-[calc(50%+40px)] w-[calc(100%-80px)] h-[1px] bg-white/10" />}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-16 text-center">
+            <Link href="/registracia?mode=trainer" className="inline-block bg-emerald-500 hover:bg-emerald-400 text-black px-10 py-4 rounded-full text-sm font-bold uppercase tracking-widest transition-all">
+              Začať teraz
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Services */}
+      <section id="services" className="py-24 bg-zinc-950/50">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="max-w-3xl mx-auto text-center mb-16">
+            <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight">Čo všetko Fitbase umožňuje</h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { title: "Osobné tréningy", text: "Klient si vyberie termín a zaplatí online. Ty máš prehľad o rezerváciách." },
+              { title: "Online konzultácie", text: "Ponúkaj konzultácie na diaľku bez zložitého dohadovania." },
+              { title: "Jedálničky na mieru", text: "Zbieraj údaje od klienta cez formulár a spravuj objednávky." },
+              { title: "Profil trénera", text: "Prezentuj svoje služby, ceny a špecializáciu." },
+              { title: "Platby a výplaty", text: "Bezpečné online platby cez Stripe Connect." },
+              { title: "Zľavové kódy a cenník", text: "Nastavuj ceny, akcie a promo kódy." }
+            ].map((service) => (
+              <div key={service.title} className="p-8 rounded-[2rem] bg-zinc-900/30 border border-white/5 hover:border-emerald-500/20 transition-all group hover:bg-zinc-900/50">
+                <h3 className="text-emerald-400 font-bold mb-4 uppercase tracking-widest">{service.title}</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed">{service.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits */}
+      <section id="benefits" className="py-24">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="max-w-4xl mx-auto bg-emerald-500 rounded-[3rem] p-10 md:p-20 text-black relative overflow-hidden">
+            <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] bg-white/20 blur-[80px] rounded-full" />
+            <div className="relative z-10">
+              <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-12">Čo tým získaš</h2>
+              <div className="grid sm:grid-cols-2 gap-y-6 gap-x-12">
+                {[
+                  "Viac dôvery u klientov",
+                  "Menej storno rezervácií",
+                  "Rýchlejšie platby",
+                  "Menej administratívy",
+                  "Lepší prehľad o službách",
+                  "Moderný online profil"
+                ].map((benefit) => (
+                  <div key={benefit} className="flex items-center gap-4">
+                    <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center shrink-0">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span className="text-xl font-bold uppercase tracking-tight">{benefit}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Preview */}
+      <section id="preview" className="py-24 bg-zinc-950/50 overflow-hidden">
+        <div className="container mx-auto px-4 md:px-6 text-center">
+          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-4">Všetko navrhnuté jednoducho a prehľadne</h2>
+          <p className="text-zinc-500 mb-16">Sústreď sa na klientov, nie na chaos okolo.</p>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 opacity-50 grayscale hover:grayscale-0 transition-all duration-700">
+            {["profil trénera", "rezervácia", "účet trénera", "cenník", "objednávky"].map((item) => (
+              <div key={item} className="aspect-square bg-zinc-900 border border-white/5 rounded-2xl flex items-center justify-center p-4">
+                <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-600">{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* For Who */}
+      <section id="for-who" className="py-24">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="grid md:grid-cols-2 gap-12">
+            <div className="bg-zinc-900/50 border border-white/5 p-10 md:p-16 rounded-[3rem] space-y-8 hover:border-emerald-500/20 transition-colors">
+              <h2 className="font-display text-4xl md:text-5xl uppercase tracking-tight text-emerald-400">Fitbase je pre teba, ak</h2>
+              <ul className="space-y-4">
+                {[
+                  "si osobný tréner a chceš viac klientov",
+                  "robíš online coaching",
+                  "ponúkaš jedálničky",
+                  "chceš pôsobiť profesionálne",
+                  "nechceš riešiť rezervácie ručne"
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-4 text-zinc-300">
+                    <span className="text-emerald-500 font-bold mt-1">+</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bg-zinc-900/20 border border-white/5 p-10 md:p-16 rounded-[3rem] space-y-8">
+              <h2 className="font-display text-4xl md:text-5xl uppercase tracking-tight text-zinc-500">Nie je to pre teba, ak</h2>
+              <ul className="space-y-4">
+                {[
+                  "nechceš online rezervácie",
+                  "nechceš verejný profil",
+                  "nechceš digitalizovať svoje služby"
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-4 text-zinc-600">
+                    <span className="text-zinc-700 font-bold mt-1">—</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="py-24 bg-zinc-950/50">
+        <div className="container mx-auto px-4 md:px-6 text-center max-w-3xl">
+          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-6">Jednoduchý a férový model</h2>
+          <p className="text-zinc-400 text-lg leading-relaxed mb-12">
+            Registrácia je zdarma. Platforma si berie províziu len z úspešne zaplatených objednávok. Zarábame len vtedy, keď zarábaš aj ty.
+          </p>
+          <div className="p-8 rounded-3xl bg-zinc-900 border border-emerald-500/20 inline-block">
+            <div className="text-5xl font-display text-emerald-500 mb-2">10 %</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Provízia z platby</div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="py-24">
+        <div className="container mx-auto px-4 md:px-6 max-w-3xl">
+          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight text-center mb-16">Časté otázky</h2>
+          <div className="space-y-6">
+            {[
+              { q: "Ako dlho trvá registrácia?", a: "Len pár minút." },
+              { q: "Musím mať firmu alebo živnosť?", a: "Závisí od Stripe onboarding procesu." },
+              { q: "Môžem ponúkať len jednu službu?", a: "Áno, môžeš mať len jednu alebo viac služieb." },
+              { q: "Ako dostanem peniaze?", a: "Cez Stripe priamo na tvoj účet." },
+              { q: "Môžem si nastavovať ceny?", a: "Áno, ceny si určuješ sám." }
+            ].map((faq) => (
+              <div key={faq.q} className="p-6 rounded-2xl bg-zinc-900/30 border border-white/5 space-y-3">
+                <h3 className="text-white font-bold uppercase tracking-tight">{faq.q}</h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">{faq.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact */}
+      <section id="contact" className="py-24 bg-zinc-950/50">
+        <div className="container mx-auto px-4 md:px-6 text-center">
+          <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-6">Máš otázky?</h2>
+          <p className="text-zinc-400 text-lg mb-12 max-w-2xl mx-auto">
+            Za Fitbase stojí reálny človek. Ak chceš, pokojne ma kontaktuj a rád ti ukážem, ako to funguje.
+          </p>
+          <div className="flex flex-col items-center gap-8">
+            <a href="mailto:info@fitbase.sk" className="text-emerald-400 text-2xl font-bold hover:text-emerald-300 transition-colors">info@fitbase.sk</a>
+            <div className="flex gap-6">
+              {["Instagram", "Facebook", "LinkedIn"].map((social) => (
+                <span key={social} className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 cursor-pointer hover:text-white transition-colors">{social}</span>
+              ))}
+            </div>
+            <button className="bg-white text-black px-10 py-4 rounded-full text-sm font-bold uppercase tracking-widest transition-all hover:bg-emerald-500 transition-all duration-500">
+              Kontaktovať ma
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section id="cta" className="py-24 md:py-48 relative overflow-hidden">
+        <div className="absolute inset-0 bg-emerald-500 pointer-events-none opacity-5" />
+        <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
+          <h2 className="font-display text-5xl md:text-8xl uppercase tracking-tight mb-8">Začni budovať svoj <br /> tréningový biznis online.</h2>
+          <p className="text-zinc-400 text-xl mb-12 max-w-xl mx-auto">
+            Získaj profil, rezervácie a platby na jednom mieste.
+          </p>
+          <Link href="/registracia?mode=trainer" className="inline-block bg-emerald-500 hover:bg-emerald-400 text-black px-12 py-5 rounded-full text-md font-bold uppercase tracking-widest transition-all shadow-2xl shadow-emerald-500/40 scale-110 hover:scale-125 transition-all duration-500">
+            Registrovať sa ako tréner
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 border-t border-white/5">
+        <div className="container mx-auto px-4 md:px-6 flex flex-col md:flex-row justify-between items-center gap-8">
+          <Image src="/Fitbase logo.png" alt="Fitbase" width={100} height={24} className="opacity-50" />
+          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+            © 2024 Fitbase. Všetky práva vyhradené.
+          </div>
+          <div className="flex gap-8 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+            <span className="hover:text-white cursor-pointer">Podmienky</span>
+            <span className="hover:text-white cursor-pointer">Súkromie</span>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }
