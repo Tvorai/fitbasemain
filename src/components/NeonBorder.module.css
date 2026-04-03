@@ -9,28 +9,66 @@
   content: "";
   position: absolute;
   inset: 0;
-  padding: var(--neon-size, 2px);
-  background: conic-gradient(
-    from 0deg,
-    rgba(0, 0, 0, 0) 0deg,
-    rgba(var(--neon-rgb, 0, 255, 136), 0) 40deg,
-    rgba(var(--neon-rgb, 0, 255, 136), 0.9) 80deg,
-    rgba(var(--neon-rgb, 0, 255, 136), 0) 130deg,
-    rgba(0, 0, 0, 0) 360deg
-  );
+  background:
+    linear-gradient(
+        90deg,
+        rgba(var(--neon-rgb, 0, 255, 136), 0) 0%,
+        rgba(var(--neon-rgb, 0, 255, 136), 0.9) 50%,
+        rgba(var(--neon-rgb, 0, 255, 136), 0) 100%
+      )
+      top / 300% var(--neon-size, 2px) no-repeat,
+    linear-gradient(
+        180deg,
+        rgba(var(--neon-rgb, 0, 255, 136), 0) 0%,
+        rgba(var(--neon-rgb, 0, 255, 136), 0.9) 50%,
+        rgba(var(--neon-rgb, 0, 255, 136), 0) 100%
+      )
+      right / var(--neon-size, 2px) 300% no-repeat,
+    linear-gradient(
+        270deg,
+        rgba(var(--neon-rgb, 0, 255, 136), 0) 0%,
+        rgba(var(--neon-rgb, 0, 255, 136), 0.9) 50%,
+        rgba(var(--neon-rgb, 0, 255, 136), 0) 100%
+      )
+      bottom / 300% var(--neon-size, 2px) no-repeat,
+    linear-gradient(
+        0deg,
+        rgba(var(--neon-rgb, 0, 255, 136), 0) 0%,
+        rgba(var(--neon-rgb, 0, 255, 136), 0.9) 50%,
+        rgba(var(--neon-rgb, 0, 255, 136), 0) 100%
+      )
+      left / var(--neon-size, 2px) 300% no-repeat;
   opacity: var(--neon-opacity, 0.45);
   filter: drop-shadow(0 0 8px rgba(var(--neon-rgb, 0, 255, 136), 0.55))
     drop-shadow(0 0 18px rgba(var(--neon-rgb, 0, 255, 136), 0.25));
-  will-change: transform;
-  animation: neonBorderSpin var(--neon-duration, 8s) linear infinite;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
+  will-change: background-position;
+  animation: neonBorderFlow var(--neon-duration, 8s) linear infinite;
 }
 
-@keyframes neonBorderSpin {
-  to {
-    transform: rotate(360deg);
+@keyframes neonBorderFlow {
+  0% {
+    background-position: 0% 0%, 100% 0%, 100% 100%, 0% 100%;
+  }
+  24.99% {
+    background-position: 100% 0%, 100% 0%, 100% 100%, 0% 100%;
+  }
+  25% {
+    background-position: 100% 0%, 100% 0%, 100% 100%, 0% 100%;
+  }
+  49.99% {
+    background-position: 100% 0%, 100% 100%, 100% 100%, 0% 100%;
+  }
+  50% {
+    background-position: 100% 0%, 100% 100%, 100% 100%, 0% 100%;
+  }
+  74.99% {
+    background-position: 100% 0%, 100% 100%, 0% 100%, 0% 100%;
+  }
+  75% {
+    background-position: 100% 0%, 100% 100%, 0% 100%, 0% 100%;
+  }
+  100% {
+    background-position: 100% 0%, 100% 100%, 0% 100%, 0% 0%;
   }
 }
 
