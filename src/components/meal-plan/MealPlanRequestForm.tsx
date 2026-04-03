@@ -63,6 +63,59 @@ export default function MealPlanRequestForm({ trainerId }: Props) {
   const [accountPhone, setAccountPhone] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
 
+  // State pre zľavový kód
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountInfo, setDiscountInfo] = useState<{
+    isValid: boolean;
+    discountAmountCents: number;
+    finalPriceCents: number;
+    originalPriceCents: number;
+    message?: string;
+  } | null>(null);
+  const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
+
+  const validateDiscount = async () => {
+    if (!discountCode.trim() || !supabase) return;
+    setIsValidatingDiscount(true);
+    setDiscountInfo(null);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const res = await fetch("/api/stripe/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trainer_id: trainerId,
+          service_type: "meal_plan",
+          discount_code: discountCode.trim(),
+          validate_only: true,
+          access_token: session?.access_token
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.is_valid) {
+        setDiscountInfo(data);
+      } else {
+        setDiscountInfo({
+          isValid: false,
+          discountAmountCents: 0,
+          finalPriceCents: data.original_price_cents || 0,
+          originalPriceCents: data.original_price_cents || 0,
+          message: data.message || "Neplatný kód"
+        });
+      }
+    } catch {
+      setDiscountInfo({
+        isValid: false,
+        discountAmountCents: 0,
+        finalPriceCents: 0,
+        originalPriceCents: 0,
+        message: "Chyba pri overovaní kódu"
+      });
+    } finally {
+      setIsValidatingDiscount(false);
+    }
+  };
+
   const form = useForm<MealPlanRequestFormValues>({
     resolver: zodResolver<MealPlanRequestFormValues, unknown, MealPlanRequestFormValues>(mealPlanRequestFormSchemaRaw),
     defaultValues: {
@@ -127,6 +180,7 @@ export default function MealPlanRequestForm({ trainerId }: Props) {
           gender: pending.form.gender,
           allergens: pending.form.allergens || "",
           favorite_foods: pending.form.favorite_foods || "",
+          discount_code: discountCode.trim() || undefined
         }),
       });
 
@@ -397,6 +451,50 @@ export default function MealPlanRequestForm({ trainerId }: Props) {
               className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
               {...form.register("favorite_foods")}
             />
+
+            <div className="pt-2 border-t border-white/5">
+              <label className="block text-xs font-bold text-zinc-400 mb-1 uppercase tracking-tight">Zľavový kód</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={discountCode}
+                  onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                  disabled={disabled}
+                  className="flex-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500 transition-all uppercase placeholder:text-zinc-600"
+                  placeholder="ZADAJ KÓD"
+                />
+                <button
+                  type="button"
+                  onClick={validateDiscount}
+                  disabled={disabled || isValidatingDiscount || !discountCode.trim()}
+                  className="px-4 py-3 bg-zinc-800 text-white rounded-xl font-bold hover:bg-zinc-700 disabled:opacity-50 transition-colors uppercase text-xs"
+                >
+                  {isValidatingDiscount ? "..." : "Použiť"}
+                </button>
+              </div>
+              {discountInfo && (
+                <div className={`mt-2 p-3 rounded-lg text-xs font-bold ${discountInfo.isValid ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                  {discountInfo.isValid ? (
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span>Pôvodná cena:</span>
+                        <span className="line-through">{(discountInfo.originalPriceCents / 100).toFixed(2)} €</span>
+                      </div>
+                      <div className="flex justify-between text-emerald-400">
+                        <span>Zľava:</span>
+                        <span>-{(discountInfo.discountAmountCents / 100).toFixed(2)} €</span>
+                      </div>
+                      <div className="flex justify-between text-lg border-t border-emerald-500/20 pt-1 mt-1">
+                        <span>Finálna cena:</span>
+                        <span>{(discountInfo.finalPriceCents / 100).toFixed(2)} €</span>
+                      </div>
+                    </div>
+                  ) : (
+                    discountInfo.message
+                  )}
+                </div>
+              )}
+            </div>
 
             <button
               type="submit"

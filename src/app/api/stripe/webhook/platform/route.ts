@@ -68,6 +68,9 @@ export async function POST(request: Request) {
       const favoriteFoods = getStringField(meta, "favorite_foods");
       const priceCentsRaw = getStringField(meta, "price_cents");
       const priceCents = priceCentsRaw ? Number(priceCentsRaw) : null;
+      const discountCode = getStringField(meta, "discount_code");
+      const discountAmountRaw = getStringField(meta, "discount_amount_cents");
+      const discountAmountCents = discountAmountRaw ? Number(discountAmountRaw) : 0;
 
       // Idempotencia - skontrolovať či už existuje meal plan s touto session
       const { data: existingMealPlan } = await supabase
@@ -95,6 +98,8 @@ export async function POST(request: Request) {
         status: "confirmed",
         payment_status: "paid",
         price_cents: priceCents,
+        discount_code: discountCode,
+        discount_amount_cents: discountAmountCents,
         currency: "eur",
         stripe_checkout_session_id: session.id,
         stripe_payment_intent_id: stripePaymentIntentId,
@@ -109,6 +114,14 @@ export async function POST(request: Request) {
       if (insertErr) {
         console.error("[Platform Webhook] Error inserting meal plan:", insertErr.message);
         return NextResponse.json({ message: insertErr.message }, { status: 500 });
+      }
+
+      // Inkrementovať used_count ak bol použitý kód
+      if (discountCode && trainerId) {
+        await supabase.rpc("increment_discount_usage", { 
+          t_id: trainerId, 
+          d_code: discountCode 
+        });
       }
 
       return NextResponse.json({ received: true, action: "inserted_meal_plan", id: inserted?.id });
@@ -181,6 +194,10 @@ export async function POST(request: Request) {
       const priceCentsFromMeta = priceCentsFromMetaRaw ? Number(priceCentsFromMetaRaw) : null;
       const priceCents = amountTotal || priceCentsFromMeta || null;
 
+      const discountCode = getStringField(meta, "discount_code");
+      const discountAmountRaw = getStringField(meta, "discount_amount_cents");
+      const discountAmountCents = discountAmountRaw ? Number(discountAmountRaw) : 0;
+
       const insertPayload: Record<string, unknown> = {
         trainer_id: trainerId,
         client_profile_id: userId,
@@ -192,6 +209,8 @@ export async function POST(request: Request) {
         stripe_payment_intent_id: stripePaymentIntentId,
         service_type: type,
         currency,
+        discount_code: discountCode,
+        discount_amount_cents: discountAmountCents,
       };
       if (priceCents !== null) insertPayload.price_cents = priceCents;
       if (clientName) insertPayload.client_name = clientName;
@@ -209,6 +228,15 @@ export async function POST(request: Request) {
         console.error("[Platform Webhook] Error inserting booking:", insertErr.message);
         return NextResponse.json({ message: insertErr.message }, { status: 500 });
       }
+
+      // Inkrementovať used_count ak bol použitý kód
+      if (discountCode && trainerId) {
+        await supabase.rpc("increment_discount_usage", { 
+          t_id: trainerId, 
+          d_code: discountCode 
+        });
+      }
+
       return NextResponse.json({ received: true, action: "inserted", booking_id: inserted?.id });
     }
   }

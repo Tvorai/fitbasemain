@@ -132,6 +132,16 @@ export default function TrainerDashboardPage() {
   const [priceOnlineEuro, setPriceOnlineEuro] = useState("");
   const [priceMealPlanEuro, setPriceMealPlanEuro] = useState("");
 
+  // State pre "Zľavové kódy"
+  const [discounts, setDiscounts] = useState<any[]>([]);
+  const [newDiscount, setNewDiscount] = useState({
+    code: "",
+    type: "percent" as "percent" | "fixed",
+    value: "",
+    service_type: "personal" as "personal" | "online" | "meal_plan",
+    max_uses: ""
+  });
+
   const loadProfile = useCallback(async () => {
     setLoading(true);
     try {
@@ -182,6 +192,13 @@ export default function TrainerDashboardPage() {
         setPricePersonalEuro(pPersonal && pPersonal > 0 ? (pPersonal / 100).toFixed(2) : "");
         setPriceOnlineEuro(pOnline && pOnline > 0 ? (pOnline / 100).toFixed(2) : "");
         setPriceMealPlanEuro(typeof pMealPlan === "number" && pMealPlan > 0 ? (pMealPlan / 100).toFixed(2) : "");
+
+        const { data: dscRes } = await supabase
+          .from("trainer_discounts")
+          .select("*")
+          .eq("trainer_id", trainer.id)
+          .order("created_at", { ascending: false });
+        if (dscRes) setDiscounts(dscRes);
       }
     } catch (err) {
       console.error("Error loading profile:", err);
@@ -599,6 +616,98 @@ export default function TrainerDashboardPage() {
         });
       return next;
     });
+  };
+
+  const handleSavePricing = async () => {
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const pPersonal = Math.round(parseFloat(pricePersonalEuro.replace(",", ".")) * 100) || 0;
+      const pOnline = Math.round(parseFloat(priceOnlineEuro.replace(",", ".")) * 100) || 0;
+      const pMealPlan = Math.round(parseFloat(priceMealPlanEuro.replace(",", ".")) * 100) || 0;
+
+      const { error } = await supabase
+        .from("trainers")
+        .update({
+          price_personal_cents: pPersonal,
+          price_online_cents: pOnline,
+          price_meal_plan_cents: pMealPlan
+        })
+        .eq("profile_id", user.id);
+
+      if (error) throw error;
+      alert("Cenník bol uložený.");
+    } catch (err: any) {
+      console.error(err);
+      alert("Chyba pri ukladaní cenníka.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddDiscount = async () => {
+    if (!newDiscount.code || !newDiscount.value) return;
+    setSaving(true);
+    try {
+      const val = parseInt(newDiscount.value);
+      const mx = newDiscount.max_uses ? parseInt(newDiscount.max_uses) : null;
+      
+      const { error } = await supabase
+        .from("trainer_discounts")
+        .insert({
+          trainer_id: trainerId,
+          code: newDiscount.code.toUpperCase(),
+          type: newDiscount.type,
+          value: val,
+          service_type: newDiscount.service_type,
+          max_uses: mx
+        });
+
+      if (error) throw error;
+
+      setNewDiscount({ code: "", type: "percent", value: "", service_type: "personal", max_uses: "" });
+      loadProfile();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Chyba pri pridávaní zľavy.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleDiscountActive = async (id: string, current: boolean) => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("trainer_discounts")
+        .update({ is_active: !current })
+        .eq("id", id);
+      if (error) throw error;
+      loadProfile();
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteDiscount = async (id: string) => {
+    if (!confirm("Naozaj vymazať tento kód?")) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("trainer_discounts")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      loadProfile();
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   type TrainerReviewItem = {
@@ -1296,6 +1405,98 @@ export default function TrainerDashboardPage() {
                   >
                     {saving ? "Ukladám..." : "Uložiť cenník"}
                   </button>
+                </div>
+
+                <div className="pt-6 border-t border-white/10">
+                  <div className="text-white font-bold text-lg mb-4">Zľavové kódy</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-black/20 border border-white/10 rounded-2xl p-5 space-y-4">
+                      <div className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Nový kód</div>
+                      <div className="space-y-3">
+                        <input
+                          placeholder="KÓD (napr. LETO20)"
+                          value={newDiscount.code}
+                          onChange={(e) => setNewDiscount({ ...newDiscount, code: e.target.value.toUpperCase() })}
+                          className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                        <div className="flex gap-2">
+                          <select
+                            value={newDiscount.type}
+                            onChange={(e) => setNewDiscount({ ...newDiscount, type: e.target.value as any })}
+                            className="flex-1 p-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white outline-none"
+                          >
+                            <option value="percent">Percentá (%)</option>
+                            <option value="fixed">Fixná suma (EUR)</option>
+                          </select>
+                          <input
+                            placeholder="Hodnota"
+                            type="number"
+                            value={newDiscount.value}
+                            onChange={(e) => setNewDiscount({ ...newDiscount, value: e.target.value })}
+                            className="w-24 p-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                        <select
+                          value={newDiscount.service_type}
+                          onChange={(e) => setNewDiscount({ ...newDiscount, service_type: e.target.value as any })}
+                          className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white outline-none"
+                        >
+                          <option value="personal">Osobný tréning</option>
+                          <option value="online">Online konzultácia</option>
+                          <option value="meal_plan">Jedálniček na mieru</option>
+                        </select>
+                        <input
+                          placeholder="Max. počet použití (voliteľné)"
+                          type="number"
+                          value={newDiscount.max_uses}
+                          onChange={(e) => setNewDiscount({ ...newDiscount, max_uses: e.target.value })}
+                          className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                        <button
+                          onClick={handleAddDiscount}
+                          disabled={saving || !newDiscount.code || !newDiscount.value}
+                          className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 rounded-xl text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+                        >
+                          Pridať kód
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                      {discounts.length === 0 ? (
+                        <div className="text-zinc-500 italic text-sm text-center py-10">Zatiaľ žiadne kódy.</div>
+                      ) : (
+                        discounts.map((d) => (
+                          <div key={d.id} className="bg-zinc-800/50 border border-white/5 rounded-xl p-4 flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-emerald-400">{d.code}</span>
+                                <span className="text-[10px] bg-zinc-700 px-2 py-0.5 rounded uppercase text-zinc-300">
+                                  {d.service_type === "personal" ? "Osobný" : d.service_type === "online" ? "Online" : "Jedálniček"}
+                                </span>
+                              </div>
+                              <div className="text-xs text-zinc-400 mt-1">
+                                {d.value}{d.type === "percent" ? "%" : " EUR"} • Použité: {d.used_count}/{d.max_uses || "∞"}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => toggleDiscountActive(d.id, d.is_active)}
+                                className={`w-10 h-5 rounded-full relative transition-colors ${d.is_active ? "bg-emerald-500" : "bg-zinc-600"}`}
+                              >
+                                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${d.is_active ? "left-6" : "left-1"}`} />
+                              </button>
+                              <button onClick={() => deleteDiscount(d.id)} className="text-zinc-500 hover:text-red-400 p-1">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

@@ -22,6 +22,8 @@ const bodySchema = z.object({
   gender: z.string().optional(),
   allergens: z.string().optional(),
   favorite_foods: z.string().optional(),
+  discount_code: z.string().optional(),
+  validate_only: z.boolean().optional(),
 });
 
 type TrainerRow = {
@@ -86,9 +88,6 @@ export async function POST(request: Request) {
   if (!trainerRes.data) {
     return NextResponse.json({ message: "Tréner neexistuje." }, { status: 404 });
   }
-  if (!trainerRes.data.stripe_account_id) {
-    return NextResponse.json({ message: "Tréner nemá prepojený Stripe účet." }, { status: 400 });
-  }
 
   let priceCents = 0;
   if (input.service_type === "online") {
@@ -99,9 +98,63 @@ export async function POST(request: Request) {
     priceCents = trainerRes.data.price_personal_cents || 0;
   }
 
-  if (typeof priceCents !== "number" || !Number.isInteger(priceCents) || priceCents <= 0) {
-    return NextResponse.json({ message: "Tréner nemá nastavenú cenu pre túto službu." }, { status: 400 });
+  const originalPriceCents = priceCents;
+  let finalPriceCents = priceCents;
+  let discountAmountCents = 0;
+  let validatedDiscountCode: string | null = null;
+  let isValid = false;
+  let discountMessage = "";
+
+  if (input.discount_code) {
+    const { data: discount } = await supabase
+      .from("trainer_discounts")
+      .select("*")
+      .eq("trainer_id", input.trainer_id)
+      .eq("code", input.discount_code.toUpperCase())
+      .eq("service_type", input.service_type)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (discount) {
+      const isUsageValid = !discount.max_uses || discount.used_count < discount.max_uses;
+      if (isUsageValid) {
+        if (discount.type === "percent") {
+          discountAmountCents = Math.round((priceCents * discount.value) / 100);
+        } else {
+          discountAmountCents = discount.value * 100;
+        }
+        finalPriceCents = Math.max(0, priceCents - discountAmountCents);
+        validatedDiscountCode = discount.code;
+        isValid = true;
+      } else {
+        discountMessage = "Kód už dosiahol maximálny počet použití.";
+      }
+    } else {
+      discountMessage = "Neplatný alebo neaktívny zľavový kód pre túto službu.";
+    }
   }
+
+  if (input.validate_only) {
+    return NextResponse.json({
+      is_valid: isValid,
+      discount_code: validatedDiscountCode,
+      discount_amount_cents: discountAmountCents,
+      final_price_cents: finalPriceCents,
+      original_price_cents: originalPriceCents,
+      message: discountMessage
+    });
+  }
+
+  if (!trainerRes.data.stripe_account_id) {
+     return NextResponse.json({ message: "Tréner nemá prepojený Stripe účet." }, { status: 400 });
+   }
+
+   if (typeof finalPriceCents !== "number" || !Number.isInteger(finalPriceCents) || (finalPriceCents <= 0 && originalPriceCents > 0)) {
+     // Ak je cena 0 po zľave, je to OK, ale pôvodná cena musí byť validná
+     if (originalPriceCents <= 0) {
+       return NextResponse.json({ message: "Tréner nemá nastavenú cenu pre túto službu." }, { status: 400 });
+     }
+   }
 
   if (input.service_type !== "meal_plan") {
     if (!input.starts_at || !input.ends_at) {
@@ -132,7 +185,10 @@ export async function POST(request: Request) {
     client_email: input.client_email,
     client_phone: input.client_phone || "",
     note: input.note || "",
-    price_cents: String(priceCents),
+    price_cents: String(finalPriceCents),
+    original_price_cents: String(originalPriceCents),
+    discount_amount_cents: String(discountAmountCents),
+    discount_code: validatedDiscountCode || "",
     currency: "eur",
   };
 
@@ -158,7 +214,7 @@ export async function POST(request: Request) {
         quantity: 1,
         price_data: {
           currency: "eur",
-          unit_amount: priceCents,
+          unit_amount: finalPriceCents,
           product_data: { name: getServiceLabel(input.service_type) },
         },
       },
