@@ -9,6 +9,15 @@ export default function HomePage() {
   const [isScrolled, setIsScrolled] = useState(false);
   const vantaRef = useRef<HTMLDivElement>(null);
   const [vantaEffect, setVantaEffect] = useState<any>(null);
+  const [activeIndex, setActiveIndex] = useState(2);
+
+  const carouselImages = [
+    { src: "/1.png", title: "Profil trénera" },
+    { src: "/2.png", title: "Rezervácie" },
+    { src: "/3.png", title: "Kalendár" },
+    { src: "/4.png", title: "Služby" },
+    { src: "/5.png", title: "Objednávky" },
+  ];
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -331,19 +340,93 @@ export default function HomePage() {
       </section>
 
       {/* Preview */}
-      <section id="preview" className="py-24 bg-zinc-950/50 overflow-hidden">
-        <div className="container mx-auto px-4 md:px-6 text-center">
+      <section id="preview" className="py-24 bg-zinc-950/50 overflow-hidden relative">
+        <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
           <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-4">
             Všetko navrhnuté jednoducho a prehľadne
           </h2>
           <p className="text-zinc-500 mb-16">Sústreď sa na klientov, nie na chaos okolo.</p>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 opacity-50 grayscale hover:grayscale-0 transition-all duration-700">
-            {["profil trénera", "rezervácia", "účet trénera", "cenník", "objednávky"].map((item) => (
-              <div key={item} className="aspect-square bg-zinc-900 border border-white/5 rounded-2xl flex items-center justify-center p-4">
-                <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-600">{item}</span>
-              </div>
-            ))}
+          <div className="relative h-[300px] md:h-[500px] flex items-center justify-center">
+            <div className="relative w-full max-w-4xl h-full flex items-center justify-center perspective-[2000px]">
+              {carouselImages.map((image, idx) => {
+                const diff = idx - activeIndex;
+                const isActive = idx === activeIndex;
+                const absDiff = Math.abs(diff);
+                
+                // Visibility and 3D positioning
+                let opacity = 0;
+                let scale = 0.5;
+                let x = 0;
+                let z = -400;
+                let rotateY = 0;
+                let blur = "blur(8px)";
+                let zIndex = 0;
+
+                if (absDiff === 0) {
+                  opacity = 1;
+                  scale = 1;
+                  x = 0;
+                  z = 0;
+                  blur = "blur(0px)";
+                  zIndex = 10;
+                } else if (absDiff === 1) {
+                  opacity = 0.8;
+                  scale = 0.8;
+                  x = diff * 50; // percentage
+                  z = -200;
+                  rotateY = diff * -25;
+                  blur = "blur(2px)";
+                  zIndex = 5;
+                } else if (absDiff === 2) {
+                  opacity = 0.4;
+                  scale = 0.6;
+                  x = diff * 70; // percentage
+                  z = -400;
+                  rotateY = diff * -45;
+                  blur = "blur(4px)";
+                  zIndex = 2;
+                }
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setActiveIndex(idx)}
+                    className="absolute w-[80%] md:w-[60%] aspect-video transition-all duration-700 ease-out cursor-pointer"
+                    style={{
+                      transform: `translateX(${x}%) translateZ(${z}px) rotateY(${rotateY}deg) scale(${scale})`,
+                      opacity,
+                      filter: blur,
+                      zIndex,
+                    }}
+                  >
+                    <div className="relative w-full h-full rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl bg-zinc-900 group">
+                      <Image
+                        src={image.src}
+                        alt={image.title}
+                        fill
+                        className="object-cover"
+                      />
+                      <div className={`absolute inset-0 bg-black/40 transition-opacity duration-500 ${isActive ? 'opacity-0' : 'opacity-100'}`} />
+                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">{image.title}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Carousel Controls */}
+            <div className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 flex gap-3">
+              {carouselImages.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveIndex(idx)}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${idx === activeIndex ? 'w-8 bg-emerald-500' : 'bg-zinc-700'}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>
