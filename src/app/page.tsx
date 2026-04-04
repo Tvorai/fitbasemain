@@ -74,31 +74,52 @@ export default function HomePage() {
 
     const initVanta = () => {
       if (typeof window !== "undefined" && (window as any).VANTA && (window as any).VANTA.TOPOLOGY && vantaRef.current && !effect) {
-        effect = (window as any).VANTA.TOPOLOGY({
-          el: vantaRef.current,
-          mouseControls: true,
-          touchControls: true,
-          gyroControls: false,
-          minHeight: 200.00,
-          minWidth: 200.00,
-          scale: 1.00,
-          scaleMobile: 1.00,
-          color: 0x56ca56,
-          backgroundColor: 0x0
-        });
+        try {
+          effect = (window as any).VANTA.TOPOLOGY({
+            el: vantaRef.current,
+            mouseControls: false,
+            touchControls: false,
+            gyroControls: false,
+            minHeight: 200.00,
+            minWidth: 200.00,
+            scale: 1.00,
+            scaleMobile: 1.00,
+            color: 0x56ca56,
+            backgroundColor: 0x0,
+            points: 8,
+            maxDistance: 15,
+            spacing: 20,
+            forceAnimate: true
+          });
+          
+          // Force a resize after init
+          if (effect && effect.resize) {
+            setTimeout(() => effect.resize(), 100);
+          }
+        } catch (err) {
+          console.error("Vanta init error:", err);
+        }
       }
     };
 
-    // Delay initialization slightly to ensure scripts are ready and DOM is stable
-    const timer = setTimeout(() => {
-      if ((window as any).VANTA && (window as any).VANTA.TOPOLOGY) {
-        initVanta();
+    const handleResize = () => {
+      if (effect && effect.resize) {
+        effect.resize();
       }
-    }, 500);
+    };
+
+    const timer = setTimeout(initVanta, 1000);
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
 
     return () => {
       clearTimeout(timer);
-      if (effect) effect.destroy();
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+      if (effect) {
+        effect.destroy();
+        effect = null;
+      }
     };
   }, []);
 
@@ -119,18 +140,53 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-emerald-500/30">
-      <Script
-        src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.min.js"
-        strategy="beforeInteractive"
+    <>
+      {/* Base Black Background */}
+      <div className="fixed inset-0 z-[-20] bg-black" />
+      
+      <div 
+        ref={vantaRef} 
+        className="fixed inset-0 z-[-10] opacity-40 pointer-events-none w-full h-full" 
+        style={{ 
+          backfaceVisibility: 'hidden', 
+          transform: 'translate3d(0,0,0)', 
+          willChange: 'transform',
+          height: '100dvh'
+        }}
       />
-      <Script
-        src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.topology.min.js"
-        strategy="afterInteractive"
-      />
-      <div ref={vantaRef} className="fixed inset-0 z-0 opacity-40 pointer-events-none w-full h-full" />
 
-      <div className="relative z-10">
+      <div className="min-h-screen text-white selection:bg-emerald-500/30 relative z-0">
+        <Script
+          src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.min.js"
+          strategy="beforeInteractive"
+        />
+        <Script
+          src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.topology.min.js"
+          strategy="afterInteractive"
+          onLoad={() => {
+            const vantaInit = (window as any).VANTA?.TOPOLOGY;
+            if (vantaInit && vantaRef.current) {
+              vantaInit({
+                el: vantaRef.current,
+                mouseControls: false,
+                touchControls: false,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                scale: 1.00,
+                scaleMobile: 1.00,
+                color: 0x56ca56,
+                backgroundColor: 0x0,
+                points: 8,
+                maxDistance: 15,
+                spacing: 20,
+                forceAnimate: true
+              });
+            }
+          }}
+        />
+
+        <div className="relative z-0">
         {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 pt-4 md:pt-6">
         <div
@@ -759,6 +815,10 @@ export default function HomePage() {
       </footer>
       </div>
       <style jsx global>{`
+        html, body {
+          background-color: black;
+          overscroll-behavior-y: none;
+        }
         @keyframes fitbaseBannerFloat {
           0%,
           100% {
