@@ -176,7 +176,6 @@ export default function HomePage() {
 
               <div className="order-3 lg:hidden mt-12 mb-4">
                 <div className="relative w-full max-w-[560px] mx-auto fitbase-bannerFloat">
-                  <div className="absolute inset-0 bg-emerald-500/10 blur-[60px]" />
                   <div className="relative rounded-[2.5rem] bg-zinc-900/20 backdrop-blur-sm shadow-2xl overflow-hidden">
                     <Image
                       src="/banner.png"
@@ -208,7 +207,6 @@ export default function HomePage() {
 
             <div className="relative hidden lg:flex justify-center lg:justify-end">
               <div className="relative w-full max-w-[560px] fitbase-bannerFloat">
-                <div className="absolute inset-0 bg-emerald-500/10 blur-[60px]" />
                 <div className="relative rounded-[2.5rem] bg-zinc-900/20 backdrop-blur-sm shadow-2xl overflow-hidden">
                   <Image
                     src="/banner.png"
@@ -330,7 +328,6 @@ export default function HomePage() {
       <section id="benefits" className="pt-12 pb-24 md:py-24">
         <div className="container mx-auto px-4 md:px-6">
           <div className="max-w-4xl mx-auto bg-emerald-500 rounded-[3rem] p-10 md:p-20 text-black relative overflow-hidden">
-            <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] bg-white/20 blur-[80px] rounded-full" />
             <div className="relative z-10">
               <h2 className="font-display text-4xl md:text-6xl uppercase tracking-tight mb-12">
                 Čo tým získaš
@@ -455,7 +452,6 @@ export default function HomePage() {
       <section id="for-who" className="pt-12 pb-24 md:py-24">
         <div className="container mx-auto px-4 md:px-6">
           <div className="relative max-w-5xl mx-auto">
-            <div className="absolute inset-0 bg-emerald-500/10 blur-[70px] rounded-[3rem]" />
             <div className="relative bg-zinc-900/40 border border-emerald-500/20 rounded-[3rem] p-10 md:p-16 backdrop-blur-sm shadow-[0_20px_80px_rgba(0,0,0,0.6)]">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-10">
                 <div className="space-y-4">
@@ -530,7 +526,6 @@ export default function HomePage() {
               >
                 <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="absolute inset-0 bg-emerald-500/8" />
-                  <div className="absolute -top-24 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-emerald-500/20 blur-[70px]" />
                 </div>
                 <div className="relative space-y-3">
                   <div className="mx-auto mb-2 h-10 w-10 rounded-2xl border border-emerald-500/20 bg-black/20 flex items-center justify-center">
@@ -572,7 +567,6 @@ export default function HomePage() {
 
       {/* Final CTA */}
       <section id="cta" className="py-24 md:py-48 relative overflow-hidden">
-        <div className="absolute inset-0 bg-emerald-500 pointer-events-none opacity-5" />
         <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
           <h2 className="font-display text-5xl md:text-8xl uppercase tracking-tight mb-8">
             Začni budovať svoj <br /> tréningový biznis online.
