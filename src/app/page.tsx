@@ -2,16 +2,48 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import Script from "next/script";
+import { useEffect, useState, useRef } from "react";
 
 export default function HomePage() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const vantaRef = useRef<HTMLDivElement>(null);
+  const [vantaEffect, setVantaEffect] = useState<any>(null);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const initVanta = () => {
+      if (typeof window !== "undefined" && (window as any).VANTA && (window as any).VANTA.TOPOLOGY && vantaRef.current && !vantaEffect) {
+        const effect = (window as any).VANTA.TOPOLOGY({
+          el: vantaRef.current,
+          mouseControls: true,
+          touchControls: true,
+          gyroControls: false,
+          minHeight: 200.00,
+          minWidth: 200.00,
+          scale: 1.00,
+          scaleMobile: 1.00,
+          color: 0x56ca56,
+          backgroundColor: 0x0
+        });
+        setVantaEffect(effect);
+      }
+    };
+
+    // Check if scripts are already loaded
+    if ((window as any).VANTA && (window as any).VANTA.TOPOLOGY) {
+      initVanta();
+    }
+
+    return () => {
+      if (vantaEffect) vantaEffect.destroy();
+    };
+  }, [vantaEffect]);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -31,7 +63,35 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-emerald-500/30">
-      {/* Navigation */}
+      <Script
+        src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.min.js"
+        strategy="beforeInteractive"
+      />
+      <Script
+        src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.topology.min.js"
+        strategy="afterInteractive"
+        onLoad={() => {
+          if ((window as any).VANTA && (window as any).VANTA.TOPOLOGY && vantaRef.current && !vantaEffect) {
+            const effect = (window as any).VANTA.TOPOLOGY({
+              el: vantaRef.current,
+              mouseControls: true,
+              touchControls: true,
+              gyroControls: false,
+              minHeight: 200.00,
+              minWidth: 200.00,
+              scale: 1.00,
+              scaleMobile: 1.00,
+              color: 0x56ca56,
+              backgroundColor: 0x0
+            });
+            setVantaEffect(effect);
+          }
+        }}
+      />
+      <div ref={vantaRef} className="fixed inset-0 z-0 opacity-40" />
+
+      <div className="relative z-10">
+        {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 pt-4 md:pt-6">
         <div
           className={`mx-auto max-w-6xl rounded-full border border-emerald-500/30 backdrop-blur-md shadow-[0_6px_18px_rgba(0,0,0,0.45)] transition-all duration-300 ${
@@ -88,11 +148,6 @@ export default function HomePage() {
 
       {/* Hero Section */}
       <section id="hero" className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-[1400px] pointer-events-none opacity-20">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/40 blur-[120px] rounded-full" />
-          <div className="absolute bottom-[10%] right-[-5%] w-[30%] h-[30%] bg-emerald-600/30 blur-[100px] rounded-full" />
-        </div>
-
         <div className="container mx-auto px-4 md:px-6 relative z-10">
           <div className="grid lg:grid-cols-2 gap-14 lg:gap-16 items-center">
             <div className="text-center lg:text-left space-y-8">
@@ -441,6 +496,7 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+      </div>
       <style jsx global>{`
         @keyframes fitbaseBannerFloat {
           0%,
