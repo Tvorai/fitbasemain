@@ -147,32 +147,26 @@ export default function UserRegistrationPage() {
                   return;
                 }
 
-                if (authMode === "trainer") {
-                  const userRes = await supabase.auth.getUser();
-                  const user = userRes.data.user;
-                  if (!user) {
-                    await supabase.auth.signOut();
-                    setStatus({ type: "error", text: "Nepodarilo sa overiť trénera. Skúste sa prihlásiť." });
-                    return;
-                  }
-
-                  const trainerRes = await supabase
-                    .from("trainers")
-                    .select("id")
-                    .eq("profile_id", user.id)
-                    .maybeSingle<{ id: string }>();
-
-                  if (trainerRes.error || !trainerRes.data?.id) {
-                    await supabase.auth.signOut();
-                    setStatus({ type: "error", text: "Trénerský profil nebol nájdený. Skúste sa prihlásiť." });
-                    return;
-                  }
-
-                  router.push("/ucet-trenera");
+                // Auto-detect user type and redirect
+                const userRes = await supabase.auth.getUser();
+                const user = userRes.data.user;
+                
+                if (!user) {
+                  router.push("/ucet");
                   return;
                 }
 
-                router.push("/ucet");
+                const trainerRes = await supabase
+                  .from("trainers")
+                  .select("id")
+                  .eq("profile_id", user.id)
+                  .maybeSingle<{ id: string }>();
+
+                if (trainerRes.data?.id) {
+                  router.push("/ucet-trenera");
+                } else {
+                  router.push("/ucet");
+                }
               }}
             >
               <div>

@@ -115,32 +115,26 @@ export default function UserLoginPage() {
                     return;
                   }
 
-                  if (authMode === "trainer") {
-                    const userRes = await supabase.auth.getUser();
-                    const user = userRes.data.user;
-                    if (!user) {
-                      await supabase.auth.signOut();
-                      setModeError("Nepodarilo sa overiť účet trénera. Skúste to znova.");
-                      return;
-                    }
-
-                    const trainerRes = await supabase
-                      .from("trainers")
-                      .select("id")
-                      .eq("profile_id", user.id)
-                      .maybeSingle<{ id: string }>();
-
-                    if (trainerRes.error || !trainerRes.data?.id) {
-                      await supabase.auth.signOut();
-                      setModeError("Tento účet nie je tréner.");
-                      return;
-                    }
-
-                    router.push("/ucet-trenera");
+                  // Auto-detect user type and redirect
+                  const userRes = await supabase.auth.getUser();
+                  const user = userRes.data.user;
+                  
+                  if (!user) {
+                    router.push("/ucet");
                     return;
                   }
 
-                  router.push("/ucet");
+                  const trainerRes = await supabase
+                    .from("trainers")
+                    .select("id")
+                    .eq("profile_id", user.id)
+                    .maybeSingle<{ id: string }>();
+
+                  if (trainerRes.data?.id) {
+                    router.push("/ucet-trenera");
+                  } else {
+                    router.push("/ucet");
+                  }
                 }}
               >
                 <div>
