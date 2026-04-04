@@ -79,7 +79,7 @@ export default function UserLoginPage() {
               </button>
             </div>
 
-            <h1 className="font-display text-5xl leading-[0.9] tracking-wide md:text-6xl">
+            <h1 className="font-display text-4xl leading-[0.9] tracking-wide whitespace-nowrap md:text-6xl">
               {view === "forgot-password" 
                 ? messages.pages.userLogin.forgotPasswordTitle.toUpperCase()
                 : (authMode === "trainer" ? "Prihlásenie trénera" : messages.pages.userLogin.title).toUpperCase()}
