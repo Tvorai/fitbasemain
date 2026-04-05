@@ -50,19 +50,12 @@ export default function SuccessPage({
             </div>
           )}
 
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+          <div className="mt-10 flex justify-center">
             <Link
               href="/ucet"
-              className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-8 py-3 text-black text-xs font-bold uppercase tracking-widest hover:bg-emerald-400 transition-colors"
+              className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-12 py-4 text-black text-sm font-bold uppercase tracking-widest hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
             >
               Prejsť do účtu
-            </Link>
-
-            <Link
-              href="/historia-rezervacii"
-              className="inline-flex items-center justify-center rounded-full border border-white/10 bg-zinc-950/40 px-8 py-3 text-zinc-200 text-xs font-bold uppercase tracking-widest hover:bg-white/5 hover:text-white transition-colors"
-            >
-              História rezervácií
             </Link>
           </div>
         </div>
