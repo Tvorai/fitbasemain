@@ -159,6 +159,10 @@ export default function RoadmapPage() {
                 </div>
               ))}
             </div>
+            
+            <div className="mt-12 text-zinc-500 text-sm font-medium italic opacity-60">
+              A omnoho viac...
+            </div>
           </div>
         </section>
 
