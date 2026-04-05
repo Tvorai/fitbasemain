@@ -15,6 +15,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     "/historia-platieb",
     "/prihlasenie",
     "/registracia",
+    "/roadmap",
     "/prihlasenie-trenera",
     "/prihlásenie-trénera",
     "/prihl%C3%A1senie-tr%C3%A9nera",
@@ -30,6 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const hideChrome =
     pathname === "/" ||
+    pathname === "/roadmap" ||
     pathname === "/prihlasenie" ||
     pathname === "/registracia" ||
     pathname === "/registrácia-trénera" ||
