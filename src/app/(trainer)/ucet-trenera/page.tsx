@@ -413,13 +413,11 @@ export default function TrainerDashboardPage() {
       const personalCents = toCents(pricePersonalEuro);
       const onlineCents = toCents(priceOnlineEuro);
       const mealPlanCents = toCents(priceMealPlanEuro);
-      const pFee = Math.min(100, Math.max(0, parseInt(platformFeePercent) || 0));
 
       const payload: Record<string, number | null> = {
         price_personal_cents: personalCents,
         price_online_cents: onlineCents,
-        price_meal_plan_cents: mealPlanCents,
-        platform_fee_percent: pFee
+        price_meal_plan_cents: mealPlanCents
       };
       const { error } = await supabase
         .from("trainers")
@@ -1383,20 +1381,8 @@ export default function TrainerDashboardPage() {
                       className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-white placeholder:text-zinc-600"
                       placeholder="40.00"
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest">Provízia platformy (%)</label>
-                    <input
-                      value={platformFeePercent}
-                      onChange={(e) => setPlatformFeePercent(e.target.value)}
-                      type="number"
-                      min="0"
-                      max="100"
-                      className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-white placeholder:text-zinc-600"
-                      placeholder="10"
-                    />
                     <div className="text-[10px] text-zinc-500 italic mt-1 ml-1">
-                      Táto provízia sa odpočíta z každej novej platby.
+                      provízia platforme je 10% z každej úspešne prijatej tranzakcie
                     </div>
                   </div>
                 </div>
