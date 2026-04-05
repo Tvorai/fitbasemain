@@ -1007,7 +1007,7 @@ export default function TrainerDashboardPage() {
       case "kalendar":
         return (
           <div className="flex flex-col gap-6 w-full max-w-[760px] ml-auto">
-            <h2 className="text-4xl font-display uppercase tracking-wider mb-4 text-white">Kalendár</h2>
+            <h2 className="text-4xl font-display uppercase tracking-wider mb-4 text-white">Kalendár osobných tréningov</h2>
             
             <div className="flex gap-4 mb-6 border-b border-zinc-900 pb-4">
               <button
@@ -1516,7 +1516,7 @@ export default function TrainerDashboardPage() {
     { id: "profil", label: "Môj profil" },
     { id: "rezervacie", label: "Všetky rezervácie" },
     { id: "sluzby", label: "Služby" },
-    { id: "kalendar", label: "Kalendár" },
+    { id: "kalendar", label: "Kalendár osobných tréningov" },
     { id: "online-konzultacie", label: "Online konzultácie" },
     { id: "recenzie", label: "Recenzie" },
     { id: "vysledky", label: "Výsledky klientov" },
